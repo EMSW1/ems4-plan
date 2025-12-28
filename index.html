@@ -11,35 +11,38 @@
         .deploy-card { transition: all 0.2s ease; border-left: 5px solid #cbd5e1; }
         .plat-btn.active { border-color: #2563eb; background-color: #eff6ff; color: #2563eb; }
         #loadingOverlay, #loginOverlay { background: rgba(255,255,255,0.98); position: fixed; inset: 0; z-index: 200; align-items: center; justify-content: center; display: flex; flex-direction: column; }
+        
+        /* Roles Display */
         .viewer-mode .admin-only, .viewer-mode .super-only { display: none !important; }
         .admin-mode .super-only { display: none !important; }
-        .admin-locked { pointer-events: none; background: #f8fafc !important; }
-        #saveBtn:disabled { opacity: 0.5; cursor: not-allowed; background: #94a3b8; border-color: #64748b; }
-        #rotDetailPanel { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 300; width: 90%; max-width: 450px; }
-
-        /* --- VIEWER MODE OPTIMIZATION --- */
+        
+        /* Viewer Mode Optimization */
         .viewer-mode #statsSection, 
         .viewer-mode #historySection,
         .viewer-mode header,
         .viewer-mode .admin-only { display: none !important; }
         
-        /* Hidde other platforms in target mode */
         .target-only .plat-btn:not(.active) { display: none !important; }
 
-        /* Style inputs in viewer mode to look like plain text */
+        /* Full Lock for Viewer Mode */
         .viewer-mode input, .viewer-mode select, .viewer-mode textarea {
             border: none !important;
             background: transparent !important;
-            pointer-events: none !important;
+            pointer-events: none !important; /* Block click/type */
+            user-select: none !important;
             color: #1e293b !important;
             padding-left: 0 !important;
             appearance: none;
             -webkit-appearance: none;
+            box-shadow: none !important;
         }
 
         .viewer-mode .inp-id { color: #2563eb !important; font-weight: 900 !important; }
         .viewer-mode .deploy-card { border-left: 5px solid #2563eb; box-shadow: none; border-bottom: 1px solid #e2e8f0; }
         .viewer-mode .grid-cols-1.md\:grid-cols-3 { display: none !important; }
+
+        #saveBtn:disabled { opacity: 0.5; cursor: not-allowed; background: #94a3b8; border-color: #64748b; }
+        #rotDetailPanel { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 300; width: 90%; max-width: 450px; }
     </style>
 </head>
 <body class="bg-slate-50 p-4 md:p-8 text-slate-900">
@@ -134,21 +137,26 @@
         let boitesConfig = { WEB: 100, SELENIUM: 75, AUTOMAT: 20 };
 
         window.onload = async () => {
-            const key = localStorage.getItem('ems4_key');
             const params = new URLSearchParams(window.location.search);
+            const key = localStorage.getItem('ems4_key');
             
+            // PRIORITY 1: Force View Mode if URL has mode=view
+            if (params.get('mode') === 'view') {
+                userRole = "viewer"; 
+                document.body.classList.add('viewer-mode');
+                if(params.get('target') === 'true') document.body.classList.add('target-only');
+                await initApp(); 
+                if(params.get('plat')) selectPlatform(params.get('plat'));
+                return; // Stop here, ignore admin keys
+            }
+
+            // PRIORITY 2: Check for Admin/Super Session
             if(key === CONFIG.adminKey || key === CONFIG.superKey) {
                 userRole = (key === CONFIG.superKey) ? "super" : "admin";
                 if(userRole === 'admin') document.body.classList.add('admin-mode');
                 await initApp();
                 if(params.get('plat')) selectPlatform(params.get('plat'));
                 else selectPlatform('WEB');
-            } else if (params.get('mode') === 'view') {
-                userRole = "viewer"; 
-                document.body.classList.add('viewer-mode');
-                if(params.get('target') === 'true') document.body.classList.add('target-only');
-                await initApp(); 
-                if(params.get('plat')) selectPlatform(params.get('plat'));
             } else {
                 document.getElementById('loginOverlay').style.display = 'flex';
             }
@@ -175,7 +183,10 @@
 
             const confSnap = await db.ref('ems4/config/boites').once('value');
             if(confSnap.exists()) boitesConfig = confSnap.val();
-            ['WEB','SELENIUM','AUTOMAT'].forEach(p => document.getElementById('conf-'+p).value = boitesConfig[p]);
+            ['WEB','SELENIUM','AUTOMAT'].forEach(p => {
+                const el = document.getElementById('conf-'+p);
+                if(el) el.value = boitesConfig[p];
+            });
         }
 
         async function selectPlatform(p) {
@@ -237,7 +248,9 @@
                     <textarea ${isReadonly} oninput="checkChanges()" class="inp-ips w-full p-2 border rounded text-[10px] font-mono bg-slate-50 uppercase" rows="${userRole==='viewer'?4:1}">${d.ips || ''}</textarea>
                 </div>`;
             }
-            document.getElementById('distDisplay').innerText = Array.from({length: num}, (_, i) => base + (i < rem ? 1 : 0)).join(' | ');
+            if(document.getElementById('distDisplay')) {
+                document.getElementById('distDisplay').innerText = Array.from({length: num}, (_, i) => base + (i < rem ? 1 : 0)).join(' | ');
+            }
         }
 
         function checkChanges() {
@@ -277,8 +290,8 @@
             await db.ref(`ems4/plans/${currentPlatform}/current`).set({ deploys, filter, stats, updatedAt: new Date().toLocaleString() });
 
             if(logChanges.length > 0) {
-                const publicUrl = "https://emsw1.github.io/ems4-plan";
-                const viewLink = `${publicUrl}/?mode=view&plat=${currentPlatform}&target=true`;
+                const publicUrl = window.location.origin + window.location.pathname;
+                const viewLink = `${publicUrl}?mode=view&plat=${currentPlatform}&target=true`;
                 let changesText = ""; logChanges.forEach(l => { changesText += "• " + l + "\n"; });
 
                 const telegramMsg = `🚀 <b>UPDATE: #${currentPlatform}</b>\n━━━━━━━━━━━━━━━\n📝 <b>CHANGES:</b>\n${changesText}━━━━━━━━━━━━━━━\n🔗 <b>VIEW PLAN:</b>\n${viewLink}`;
