@@ -92,7 +92,7 @@
 
             <div class="bg-white p-4 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4 border">
                 <div class="admin-only"><label class="block text-[10px] font-black text-slate-400 uppercase text-center">Deploy Count</label><input type="number" id="deployCount" oninput="generateDeploys(); compareData();" class="w-full p-2 border rounded font-black text-blue-600 text-center"></div>
-                <div><label class="block text-[10px] font-black text-blue-500 uppercase italic text-center">🔑 Filter (ID)</label><input type="text" id="filterKeyword" oninput="generateDeploys(); compareData()" class="w-full p-2 border-2 border-blue-50 rounded font-bold text-blue-700 bg-blue-50 text-center uppercase"></div>
+                <div><label class="block text-[10px] font-black text-blue-500 uppercase italic text-center">🔑 Filter (ID)</label><input type="text" id="filterKeyword" oninput="applyFilter(this.value)" class="w-full p-2 border-2 border-blue-50 rounded font-bold text-blue-700 bg-blue-50 text-center uppercase"></div>
             </div>
 
             <div id="deploysContainer" class="space-y-4"></div>
@@ -146,21 +146,14 @@
             document.getElementById('roleBadge').innerText = userRole.toUpperCase();
             document.getElementById('roleLabel').innerText = `ROLE: ${userRole.toUpperCase()}`;
             if(userRole === 'admin') {
-                document.querySelectorAll('.stat-input').forEach(el => { 
-                    el.readOnly = true; 
-                    el.classList.add('readonly-stat'); 
-                });
+                document.querySelectorAll('.stat-input').forEach(el => { el.readOnly = true; el.classList.add('readonly-stat'); });
             }
         }
 
         function renderRotationLabels(text) {
             const container = document.getElementById('rotationLabelsGrid');
             container.innerHTML = ""; if(!text) return;
-            text.split('\n').forEach(line => {
-                if(line.trim()) {
-                    container.innerHTML += `<div class="rot-label truncate">${line.trim()}</div>`;
-                }
-            });
+            text.split('\n').forEach(line => { if(line.trim()) container.innerHTML += `<div class="rot-label truncate">${line.trim()}</div>`; });
         }
 
         async function selectPlatform(p) {
@@ -189,51 +182,54 @@
             document.getElementById('loadingOverlay').style.display = 'none';
         }
 
+        function applyFilter(f) {
+            const cards = document.querySelectorAll('.deploy-card');
+            cards.forEach(card => {
+                const idVal = card.querySelector('.id-val').value.toUpperCase();
+                card.style.display = (idVal.includes(f.toUpperCase())) ? 'block' : 'none';
+            });
+            compareData();
+        }
+
         function generateDeploys(savedData = null) {
             const container = document.getElementById('deploysContainer'); container.innerHTML = "";
             const num = parseInt(document.getElementById('deployCount').value) || 0;
-            const filter = document.getElementById('filterKeyword').value.toUpperCase();
             let totalB = boitesConfig[currentPlatform] || 0;
             let bpd = num > 0 ? Math.floor(totalB / num) : 0;
 
             for (let i = 0; i < num; i++) {
                 const d = (savedData && savedData[i]) ? savedData[i] : { from: '', id: '', batch: '10/3000P', rules: 'SELECT ALL IPS', ips: '' };
-                
-                let isVisible = true;
-                if(userRole === 'viewer' && filter && !d.id.toUpperCase().includes(filter)) isVisible = false;
-                
-                if(isVisible) {
-                    container.innerHTML += `
-                    <div class="deploy-card bg-white p-4 rounded-2xl border border-slate-200 shadow-sm" data-idx="${i}">
-                        <div class="flex justify-between mb-2">
-                            <span class="text-[10px] font-black text-slate-400 uppercase">Deploy ${i+1}</span>
-                            <span class="bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-black italic">${bpd} BOITES</span>
-                        </div>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
-                            <input type="text" oninput="compareData()" class="from-val p-2 border rounded text-xs font-bold" value="${d.from}" placeholder="FROM">
-                            <input type="text" oninput="compareData()" class="id-val p-2 border rounded text-xs font-black text-blue-600" value="${d.id}" placeholder="ID">
-                            <select onchange="compareData()" class="batch-val p-2 border rounded text-xs">
-                                <option value="0/0 Parallel" ${d.batch=='0/0 Parallel'?'selected':''}>0/0 Parallel</option>
-                                <option value="3/3000P" ${d.batch=='3/3000P'?'selected':''}>3/3000P</option>
-                                <option value="5/3000P" ${d.batch=='5/3000P'?'selected':''}>5/3000P</option>
-                                <option value="10/3000P" ${d.batch=='10/3000P'?'selected':''}>10/3000P</option>
-                                <option value="20/3000P" ${d.batch=='20/3000P'?'selected':''}>20/3000P</option>
-                                <option value="30/3000P" ${d.batch=='30/3000P'?'selected':''}>30/3000P</option>
-                            </select>
-                            <select onchange="compareData()" class="rules-val p-2 border rounded text-xs">
-                                <option value="SELECT ALL IPS" ${d.rules=='SELECT ALL IPS'?'selected':''}>SELECT ALL IPS</option>
-                                <option value="SELECT 30 IPS MAX" ${d.rules=='SELECT 30 IPS MAX'?'selected':''}>SELECT 30 IPS MAX</option>
-                                <option value="RANDOM ON SELECTED" ${d.rules=='RANDOM ON SELECTED'?'selected':''}>RANDOM ON SELECTED</option>
-                                <option value="RANDOM ON SERVER SELECTED" ${d.rules=='RANDOM ON SERVER SELECTED'?'selected':''}>RANDOM ON SERVER SELECTED</option>
-                                <option value="2 ips RANDOM ON SERVER SELECTED" ${d.rules=='2 ips RANDOM ON SERVER SELECTED'?'selected':''}>2 ips RANDOM ON SERVER SELECTED</option>
-                            </select>
-                        </div>
-                        <textarea oninput="compareData()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50" rows="${userRole==='viewer'?3:1}">${d.ips}</textarea>
-                    </div>`;
-                }
+                container.innerHTML += `
+                <div class="deploy-card bg-white p-4 rounded-2xl border border-slate-200 shadow-sm" data-idx="${i}">
+                    <div class="flex justify-between mb-2">
+                        <span class="text-[10px] font-black text-slate-400 uppercase">Deploy ${i+1}</span>
+                        <span class="bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-black italic">${bpd} BOITES</span>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                        <input type="text" oninput="compareData()" class="from-val p-2 border rounded text-xs font-bold" value="${d.from}" placeholder="FROM">
+                        <input type="text" oninput="compareData()" class="id-val p-2 border rounded text-xs font-black text-blue-600" value="${d.id}" placeholder="ID">
+                        <select onchange="compareData()" class="batch-val p-2 border rounded text-xs">
+                            <option value="0/0 Parallel" ${d.batch=='0/0 Parallel'?'selected':''}>0/0 Parallel</option>
+                            <option value="3/3000P" ${d.batch=='3/3000P'?'selected':''}>3/3000P</option>
+                            <option value="5/3000P" ${d.batch=='5/3000P'?'selected':''}>5/3000P</option>
+                            <option value="10/3000P" ${d.batch=='10/3000P'?'selected':''}>10/3000P</option>
+                            <option value="20/3000P" ${d.batch=='20/3000P'?'selected':''}>20/3000P</option>
+                            <option value="30/3000P" ${d.batch=='30/3000P'?'selected':''}>30/3000P</option>
+                        </select>
+                        <select onchange="compareData()" class="rules-val p-2 border rounded text-xs">
+                            <option value="SELECT ALL IPS" ${d.rules=='SELECT ALL IPS'?'selected':''}>SELECT ALL IPS</option>
+                            <option value="SELECT 30 IPS MAX" ${d.rules=='SELECT 30 IPS MAX'?'selected':''}>SELECT 30 IPS MAX</option>
+                            <option value="RANDOM ON SELECTED" ${d.rules=='RANDOM ON SELECTED'?'selected':''}>RANDOM ON SELECTED</option>
+                            <option value="RANDOM ON SERVER SELECTED" ${d.rules=='RANDOM ON SERVER SELECTED'?'selected':''}>RANDOM ON SERVER SELECTED</option>
+                            <option value="2 ips RANDOM ON SERVER SELECTED" ${d.rules=='2 ips RANDOM ON SERVER SELECTED'?'selected':''}>2 ips RANDOM ON SERVER SELECTED</option>
+                        </select>
+                    </div>
+                    <textarea oninput="compareData()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50" rows="${userRole==='viewer'?3:1}">${d.ips}</textarea>
+                </div>`;
             }
         }
 
+        function toggleRotation() { document.getElementById('rotationBox').classList.toggle('hidden'); }
         function compareData() { if(userRole !== 'viewer') document.getElementById('saveBtn').disabled = false; }
         
         async function processSave() {
@@ -250,18 +246,14 @@
             const oldDeploys = oldCloudData.deploys || [];
 
             newDeploys.forEach((d, i) => {
-                const oldD = oldDeploys[i] || {};
-                // Only log if something actually changed in this deploy
-                if(d.from !== oldD.from || d.id !== oldD.id || d.batch !== oldD.batch || d.rules !== oldD.rules || d.ips !== oldD.ips) {
-                    if(d.id) {
-                        changesMsg.push(`📍 <b>Deploy ${i+1}:</b> ${d.id} (${d.batch}) - <i>${d.rules}</i>`);
-                    }
+                const o = oldDeploys[i] || {};
+                // Compare accurately to detect only real changes
+                if(d.from !== o.from || d.id !== o.id || d.batch !== o.batch || d.rules !== o.rules || d.ips !== o.ips) {
+                    if(d.id) changesMsg.push(`📍 <b>Deploy ${i+1}:</b> ${d.id} (${d.batch})`);
                 }
             });
 
-            const filter = document.getElementById('filterKeyword').value;
-            const saveObj = { ...oldCloudData, deploys: newDeploys, filter, timestamp: new Date().toLocaleString() };
-            
+            const saveObj = { ...oldCloudData, deploys: newDeploys, filter: document.getElementById('filterKeyword').value, timestamp: new Date().toLocaleString() };
             document.getElementById('loadingOverlay').style.display = 'flex';
             await db.ref(`ems4/plans/${currentPlatform}/current`).set(saveObj);
 
@@ -286,7 +278,6 @@
         function checkAccess() { const k = document.getElementById('accessKey').value; if(k === ADMIN_KEY || k === SUPER_KEY) { localStorage.setItem('ems4_key', k); location.reload(); } }
         function logout() { localStorage.removeItem('ems4_key'); location.reload(); }
         function changePlat(p) { if(userRole !== 'viewer') selectPlatform(p); }
-        function toggleRotation() { document.getElementById('rotationBox').classList.toggle('hidden'); }
         function checkStatsChange() { if(userRole === 'super') document.getElementById('updateStatsBtn').disabled = false; }
     </script>
 </body>
