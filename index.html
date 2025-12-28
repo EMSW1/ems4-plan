@@ -12,7 +12,7 @@
         .plat-btn.active { border-color: #2563eb; background-color: #eff6ff; color: #2563eb; ring: 4px; ring-color: #eff6ff; }
         #loadingOverlay, #loginOverlay { background: rgba(255,255,255,0.95); position: fixed; inset: 0; z-index: 200; align-items: center; justify-content: center; display: flex; }
         #loadingOverlay { display: none; z-index: 210; }
-        .viewer-mode .admin-only, .viewer-mode .super-only, .viewer-mode .platform-selector, .viewer-mode #roleLabel, .viewer-mode #roleBadge, .viewer-mode #statsSection { display: none !important; }
+        .viewer-mode .admin-only, .viewer-mode .super-only, .viewer-mode .platform-selector, .viewer-mode #roleLabel, .viewer-mode #roleBadge { display: none !important; }
         .admin-mode .super-only { display: none !important; }
         #saveBtn:disabled, #updateStatsBtn:disabled { background-color: #cbd5e1; cursor: not-allowed; opacity: 0.7; }
         .readonly-stat { pointer-events: none !important; background-color: #f1f5f9 !important; border-color: #e2e8f0 !important; }
@@ -45,21 +45,15 @@
 
         <div class="platform-selector grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div class="relative group">
-                <button onclick="changePlat('WEB')" id="btn-WEB" class="plat-btn w-full bg-white p-5 rounded-2xl shadow-sm border-2 font-black text-slate-600 uppercase italic">
-                    Web <br> <span class="text-[10px] text-blue-500 not-italic" id="label-WEB">Total: 100</span>
-                </button>
+                <button onclick="changePlat('WEB')" id="btn-WEB" class="plat-btn w-full bg-white p-5 rounded-2xl shadow-sm border-2 font-black text-slate-600 uppercase italic">Web <br> <span class="text-[10px] text-blue-500 not-italic" id="label-WEB">Total: 100</span></button>
                 <input type="number" id="input-WEB" onchange="updateBoitesConfig('WEB', this.value)" class="super-only absolute top-2 right-2 w-10 text-center text-[9px] border rounded bg-blue-50 font-bold" value="100">
             </div>
             <div class="relative group">
-                <button onclick="changePlat('SELENIUM')" id="btn-SELENIUM" class="plat-btn w-full bg-white p-5 rounded-2xl shadow-sm border-2 font-black text-slate-600 uppercase italic">
-                    Selenium <br> <span class="text-[10px] text-blue-500 not-italic" id="label-SELENIUM">Total: 75</span>
-                </button>
+                <button onclick="changePlat('SELENIUM')" id="btn-SELENIUM" class="plat-btn w-full bg-white p-5 rounded-2xl shadow-sm border-2 font-black text-slate-600 uppercase italic">Selenium <br> <span class="text-[10px] text-blue-500 not-italic" id="label-SELENIUM">Total: 75</span></button>
                 <input type="number" id="input-SELENIUM" onchange="updateBoitesConfig('SELENIUM', this.value)" class="super-only absolute top-2 right-2 w-10 text-center text-[9px] border rounded bg-blue-50 font-bold" value="75">
             </div>
             <div class="relative group">
-                <button onclick="changePlat('AUTOMAT')" id="btn-AUTOMAT" class="plat-btn w-full bg-white p-5 rounded-2xl shadow-sm border-2 font-black text-slate-600 uppercase italic">
-                    Automat <br> <span class="text-[10px] text-blue-500 not-italic" id="label-AUTOMAT">Total: 20</span>
-                </button>
+                <button onclick="changePlat('AUTOMAT')" id="btn-AUTOMAT" class="plat-btn w-full bg-white p-5 rounded-2xl shadow-sm border-2 font-black text-slate-600 uppercase italic">Automat <br> <span class="text-[10px] text-blue-500 not-italic" id="label-AUTOMAT">Total: 20</span></button>
                 <input type="number" id="input-AUTOMAT" onchange="updateBoitesConfig('AUTOMAT', this.value)" class="super-only absolute top-2 right-2 w-10 text-center text-[9px] border rounded bg-blue-50 font-bold" value="20">
             </div>
         </div>
@@ -85,16 +79,15 @@
                 
                 <div id="rotationBox" class="hidden mt-3 p-4 bg-white rounded-xl border-2 border-blue-100 shadow-lg">
                     <div class="super-only">
-                        <label class="block text-[10px] font-black text-blue-500 uppercase mb-2 italic">Edit Rotation (Super Admin)</label>
-                        <textarea id="rotationRawData" oninput="checkStatsChange(); renderRotationLabels(this.value);" class="w-full p-3 border rounded text-xs font-mono bg-slate-50 outline-none" rows="5" placeholder="Paste rotation lines here..."></textarea>
+                        <label class="block text-[10px] font-black text-blue-500 uppercase mb-2 italic">Edit Rotation</label>
+                        <textarea id="rotationRawData" oninput="checkStatsChange(); renderRotationLabels(this.value);" class="w-full p-3 border rounded text-xs font-mono bg-slate-50 outline-none" rows="5"></textarea>
                     </div>
                     <div class="mt-2">
                         <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 italic">Rotation View</label>
-                        <div id="rotationLabelsGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                            </div>
+                        <div id="rotationLabelsGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"></div>
                     </div>
                 </div>
-                <button id="updateStatsBtn" onclick="saveStatsOnly()" class="super-only mt-2 w-full bg-slate-800 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">Update Stats</button>
+                <button id="updateStatsBtn" onclick="saveStatsOnly()" class="super-only mt-2 w-full bg-slate-800 text-white py-2 rounded-xl text-[10px] font-black uppercase">Update Stats</button>
             </div>
 
             <div class="bg-white p-4 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4 border">
@@ -162,8 +155,7 @@
 
         function renderRotationLabels(text) {
             const container = document.getElementById('rotationLabelsGrid');
-            container.innerHTML = "";
-            if(!text) return;
+            container.innerHTML = ""; if(!text) return;
             text.split('\n').forEach(line => {
                 if(line.trim()) {
                     container.innerHTML += `<div class="rot-label truncate">${line.trim()}</div>`;
@@ -206,35 +198,40 @@
 
             for (let i = 0; i < num; i++) {
                 const d = (savedData && savedData[i]) ? savedData[i] : { from: '', id: '', batch: '10/3000P', rules: 'SELECT ALL IPS', ips: '' };
-                if(userRole === 'viewer' && filter && !d.id.toUpperCase().includes(filter)) continue;
                 
-                container.innerHTML += `
-                <div class="deploy-card bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                    <div class="flex justify-between mb-2">
-                        <span class="text-[10px] font-black text-slate-400 uppercase">Deploy ${i+1}</span>
-                        <span class="bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-black italic">${bpd} BOITES</span>
-                    </div>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
-                        <input type="text" oninput="compareData()" class="from-val p-2 border rounded text-xs font-bold" value="${d.from}" placeholder="FROM">
-                        <input type="text" oninput="compareData()" class="id-val p-2 border rounded text-xs font-black text-blue-600" value="${d.id}" placeholder="ID">
-                        <select onchange="compareData()" class="batch-val p-2 border rounded text-xs">
-                            <option value="0/0 Parallel" ${d.batch=='0/0 Parallel'?'selected':''}>0/0 Parallel</option>
-                            <option value="3/3000P" ${d.batch=='3/3000P'?'selected':''}>3/3000P</option>
-                            <option value="5/3000P" ${d.batch=='5/3000P'?'selected':''}>5/3000P</option>
-                            <option value="10/3000P" ${d.batch=='10/3000P'?'selected':''}>10/3000P</option>
-                            <option value="20/3000P" ${d.batch=='20/3000P'?'selected':''}>20/3000P</option>
-                            <option value="30/3000P" ${d.batch=='30/3000P'?'selected':''}>30/3000P</option>
-                        </select>
-                        <select onchange="compareData()" class="rules-val p-2 border rounded text-xs">
-                            <option value="SELECT ALL IPS" ${d.rules=='SELECT ALL IPS'?'selected':''}>SELECT ALL IPS</option>
-                            <option value="SELECT 30 IPS MAX" ${d.rules=='SELECT 30 IPS MAX'?'selected':''}>SELECT 30 IPS MAX</option>
-                            <option value="RANDOM ON SELECTED" ${d.rules=='RANDOM ON SELECTED'?'selected':''}>RANDOM ON SELECTED</option>
-                            <option value="RANDOM ON SERVER SELECTED" ${d.rules=='RANDOM ON SERVER SELECTED'?'selected':''}>RANDOM ON SERVER SELECTED</option>
-                            <option value="2 ips RANDOM ON SERVER SELECTED" ${d.rules=='2 ips RANDOM ON SERVER SELECTED'?'selected':''}>2 ips RANDOM ON SERVER SELECTED</option>
-                        </select>
-                    </div>
-                    <textarea oninput="compareData()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50" rows="${userRole==='viewer'?3:1}">${d.ips}</textarea>
-                </div>`;
+                // Fix visibility logic
+                let isVisible = true;
+                if(userRole === 'viewer' && filter && !d.id.toUpperCase().includes(filter)) isVisible = false;
+                
+                if(isVisible) {
+                    container.innerHTML += `
+                    <div class="deploy-card bg-white p-4 rounded-2xl border border-slate-200 shadow-sm" data-idx="${i}">
+                        <div class="flex justify-between mb-2">
+                            <span class="text-[10px] font-black text-slate-400 uppercase">Deploy ${i+1}</span>
+                            <span class="bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-black italic">${bpd} BOITES</span>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                            <input type="text" oninput="compareData()" class="from-val p-2 border rounded text-xs font-bold" value="${d.from}" placeholder="FROM">
+                            <input type="text" oninput="compareData()" class="id-val p-2 border rounded text-xs font-black text-blue-600" value="${d.id}" placeholder="ID">
+                            <select onchange="compareData()" class="batch-val p-2 border rounded text-xs">
+                                <option value="0/0 Parallel" ${d.batch=='0/0 Parallel'?'selected':''}>0/0 Parallel</option>
+                                <option value="3/3000P" ${d.batch=='3/3000P'?'selected':''}>3/3000P</option>
+                                <option value="5/3000P" ${d.batch=='5/3000P'?'selected':''}>5/3000P</option>
+                                <option value="10/3000P" ${d.batch=='10/3000P'?'selected':''}>10/3000P</option>
+                                <option value="20/3000P" ${d.batch=='20/3000P'?'selected':''}>20/3000P</option>
+                                <option value="30/3000P" ${d.batch=='30/3000P'?'selected':''}>30/3000P</option>
+                            </select>
+                            <select onchange="compareData()" class="rules-val p-2 border rounded text-xs">
+                                <option value="SELECT ALL IPS" ${d.rules=='SELECT ALL IPS'?'selected':''}>SELECT ALL IPS</option>
+                                <option value="SELECT 30 IPS MAX" ${d.rules=='SELECT 30 IPS MAX'?'selected':''}>SELECT 30 IPS MAX</option>
+                                <option value="RANDOM ON SELECTED" ${d.rules=='RANDOM ON SELECTED'?'selected':''}>RANDOM ON SELECTED</option>
+                                <option value="RANDOM ON SERVER SELECTED" ${d.rules=='RANDOM ON SERVER SELECTED'?'selected':''}>RANDOM ON SERVER SELECTED</option>
+                                <option value="2 ips RANDOM ON SERVER SELECTED" ${d.rules=='2 ips RANDOM ON SERVER SELECTED'?'selected':''}>2 ips RANDOM ON SERVER SELECTED</option>
+                            </select>
+                        </div>
+                        <textarea oninput="compareData()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50" rows="${userRole==='viewer'?3:1}">${d.ips}</textarea>
+                    </div>`;
+                }
             }
         }
 
@@ -242,13 +239,33 @@
         function compareData() { if(userRole !== 'viewer') document.getElementById('saveBtn').disabled = false; }
         
         async function processSave() {
-            const deploys = Array.from(document.querySelectorAll('.deploy-card')).map(c => ({ from: c.querySelector('.from-val').value, id: c.querySelector('.id-val').value, batch: c.querySelector('.batch-val').value, rules: c.querySelector('.rules-val').value, ips: c.querySelector('.ips-val').value }));
+            const cards = Array.from(document.querySelectorAll('.deploy-card'));
+            const deploys = cards.map(c => ({ 
+                from: c.querySelector('.from-val').value, 
+                id: c.querySelector('.id-val').value, 
+                batch: c.querySelector('.batch-val').value, 
+                rules: c.querySelector('.rules-val').value, 
+                ips: c.querySelector('.ips-val').value 
+            }));
+
+            let changes = [];
+            deploys.forEach((d, i) => {
+                if(d.id) changes.push(`📍 <b>Deploy ${i+1}:</b> ${d.id} (${d.batch})`);
+            });
+
             const filter = document.getElementById('filterKeyword').value;
             const saveObj = { ...oldCloudData, deploys, filter, timestamp: new Date().toLocaleString() };
             document.getElementById('loadingOverlay').style.display = 'flex';
             await db.ref(`ems4/plans/${currentPlatform}/current`).set(saveObj);
-            const msg = `🚀 <b>PLAN UPDATED: ${currentPlatform}</b>\n━━━━━━━━━━━━━━━\n🔗 <a href="${githubBase}/?mode=view&plat=${currentPlatform}">VIEW ON GITHUB</a>`;
-            await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: telegramChatId, text: msg, parse_mode: 'HTML' }) });
+
+            let changeLog = changes.length > 0 ? changes.join('\n') : "Plan Updated";
+            const msg = `🚀 <b>PLAN UPDATED: ${currentPlatform}</b>\n━━━━━━━━━━━━━━━\n${changeLog}\n━━━━━━━━━━━━━━━\n🔗 <a href="${githubBase}/?mode=view&plat=${currentPlatform}"><b>VIEW PLAN</b></a>`;
+            
+            await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ chat_id: telegramChatId, text: msg, parse_mode: 'HTML' }) 
+            });
             location.reload();
         }
 
