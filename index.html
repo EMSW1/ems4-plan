@@ -319,8 +319,7 @@ if(logChanges.length > 0) {
                                     `📝 <b>CHANGES:</b>\n` +
                                     `${changesText}` +
                                     `━━━━━━━━━━━━━━━\n` +
-                                    `🔗 <b>VIEW MODIFICATIONS:</b>\n` +
-                                    `${viewLink}`;
+                                    `🔗 <a href="${viewLink}"><b>VIEW MODIFICATIONS</b></a>;
 
                 try {
                     await fetch(`https://api.telegram.org/bot${CONFIG.telegram.token}/sendMessage`, {
