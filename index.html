@@ -199,7 +199,6 @@
             for (let i = 0; i < num; i++) {
                 const d = (savedData && savedData[i]) ? savedData[i] : { from: '', id: '', batch: '10/3000P', rules: 'SELECT ALL IPS', ips: '' };
                 
-                // Fix visibility logic
                 let isVisible = true;
                 if(userRole === 'viewer' && filter && !d.id.toUpperCase().includes(filter)) isVisible = false;
                 
@@ -235,12 +234,11 @@
             }
         }
 
-        function toggleRotation() { document.getElementById('rotationBox').classList.toggle('hidden'); }
         function compareData() { if(userRole !== 'viewer') document.getElementById('saveBtn').disabled = false; }
         
         async function processSave() {
             const cards = Array.from(document.querySelectorAll('.deploy-card'));
-            const deploys = cards.map(c => ({ 
+            const newDeploys = cards.map(c => ({ 
                 from: c.querySelector('.from-val').value, 
                 id: c.querySelector('.id-val').value, 
                 batch: c.querySelector('.batch-val').value, 
@@ -248,24 +246,33 @@
                 ips: c.querySelector('.ips-val').value 
             }));
 
-            let changes = [];
-            deploys.forEach((d, i) => {
-                if(d.id) changes.push(`📍 <b>Deploy ${i+1}:</b> ${d.id} (${d.batch})`);
+            let changesMsg = [];
+            const oldDeploys = oldCloudData.deploys || [];
+
+            newDeploys.forEach((d, i) => {
+                const oldD = oldDeploys[i] || {};
+                // Only log if something actually changed in this deploy
+                if(d.from !== oldD.from || d.id !== oldD.id || d.batch !== oldD.batch || d.rules !== oldD.rules || d.ips !== oldD.ips) {
+                    if(d.id) {
+                        changesMsg.push(`📍 <b>Deploy ${i+1}:</b> ${d.id} (${d.batch}) - <i>${d.rules}</i>`);
+                    }
+                }
             });
 
             const filter = document.getElementById('filterKeyword').value;
-            const saveObj = { ...oldCloudData, deploys, filter, timestamp: new Date().toLocaleString() };
+            const saveObj = { ...oldCloudData, deploys: newDeploys, filter, timestamp: new Date().toLocaleString() };
+            
             document.getElementById('loadingOverlay').style.display = 'flex';
             await db.ref(`ems4/plans/${currentPlatform}/current`).set(saveObj);
 
-            let changeLog = changes.length > 0 ? changes.join('\n') : "Plan Updated";
-            const msg = `🚀 <b>PLAN UPDATED: ${currentPlatform}</b>\n━━━━━━━━━━━━━━━\n${changeLog}\n━━━━━━━━━━━━━━━\n🔗 <a href="${githubBase}/?mode=view&plat=${currentPlatform}"><b>VIEW PLAN</b></a>`;
-            
-            await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ chat_id: telegramChatId, text: msg, parse_mode: 'HTML' }) 
-            });
+            if (changesMsg.length > 0) {
+                const msg = `🚀 <b>PLAN UPDATED: ${currentPlatform}</b>\n━━━━━━━━━━━━━━━\n${changesMsg.join('\n')}\n━━━━━━━━━━━━━━━\n🔗 <a href="${githubBase}/?mode=view&plat=${currentPlatform}"><b>VIEW PLAN</b></a>`;
+                await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ chat_id: telegramChatId, text: msg, parse_mode: 'HTML' }) 
+                });
+            }
             location.reload();
         }
 
@@ -279,6 +286,7 @@
         function checkAccess() { const k = document.getElementById('accessKey').value; if(k === ADMIN_KEY || k === SUPER_KEY) { localStorage.setItem('ems4_key', k); location.reload(); } }
         function logout() { localStorage.removeItem('ems4_key'); location.reload(); }
         function changePlat(p) { if(userRole !== 'viewer') selectPlatform(p); }
+        function toggleRotation() { document.getElementById('rotationBox').classList.toggle('hidden'); }
         function checkStatsChange() { if(userRole === 'super') document.getElementById('updateStatsBtn').disabled = false; }
     </script>
 </body>
