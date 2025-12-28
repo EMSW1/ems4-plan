@@ -164,6 +164,7 @@
             document.getElementById('platformContent').classList.remove('hidden'); 
             const snap = await db.ref(`ems4/plans/${p}/current`).once('value');
             oldCloudData = snap.val() || { deploys: [], stats: {}, filter: "" };
+            
             const s = oldCloudData.stats || {};
             document.getElementById('statTotalSeeds').value = s.seeds || '0';
             document.getElementById('statRDPs').value = s.rdps || '0';
@@ -176,9 +177,12 @@
             document.getElementById('statDateEnd').value = s.dateEnd || '';
             document.getElementById('rotationRawData').value = s.rotationRaw || "";
             renderRotationLabels(s.rotationRaw || "");
+            
             document.getElementById('filterKeyword').value = oldCloudData.filter || "";
             document.getElementById('deployCount').value = oldCloudData.deploys ? oldCloudData.deploys.length : 8;
+            
             generateDeploys(oldCloudData.deploys);
+            applyFilter(document.getElementById('filterKeyword').value);
             document.getElementById('loadingOverlay').style.display = 'none';
         }
 
@@ -186,7 +190,11 @@
             const cards = document.querySelectorAll('.deploy-card');
             cards.forEach(card => {
                 const idVal = card.querySelector('.id-val').value.toUpperCase();
-                card.style.display = (idVal.includes(f.toUpperCase())) ? 'block' : 'none';
+                if(!f || f.trim() === "") {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = (idVal.includes(f.toUpperCase())) ? 'block' : 'none';
+                }
             });
             compareData();
         }
@@ -200,7 +208,7 @@
             for (let i = 0; i < num; i++) {
                 const d = (savedData && savedData[i]) ? savedData[i] : { from: '', id: '', batch: '10/3000P', rules: 'SELECT ALL IPS', ips: '' };
                 container.innerHTML += `
-                <div class="deploy-card bg-white p-4 rounded-2xl border border-slate-200 shadow-sm" data-idx="${i}">
+                <div class="deploy-card bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
                     <div class="flex justify-between mb-2">
                         <span class="text-[10px] font-black text-slate-400 uppercase">Deploy ${i+1}</span>
                         <span class="bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-black italic">${bpd} BOITES</span>
@@ -224,12 +232,11 @@
                             <option value="2 ips RANDOM ON SERVER SELECTED" ${d.rules=='2 ips RANDOM ON SERVER SELECTED'?'selected':''}>2 ips RANDOM ON SERVER SELECTED</option>
                         </select>
                     </div>
-                    <textarea oninput="compareData()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50" rows="${userRole==='viewer'?3:1}">${d.ips}</textarea>
+                    <textarea oninput="compareData()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50" rows="${userRole==='viewer'?4:1}">${d.ips || ''}</textarea>
                 </div>`;
             }
         }
 
-        function toggleRotation() { document.getElementById('rotationBox').classList.toggle('hidden'); }
         function compareData() { if(userRole !== 'viewer') document.getElementById('saveBtn').disabled = false; }
         
         async function processSave() {
@@ -247,13 +254,15 @@
 
             newDeploys.forEach((d, i) => {
                 const o = oldDeploys[i] || {};
-                // Compare accurately to detect only real changes
+                // Detect exact changes only
                 if(d.from !== o.from || d.id !== o.id || d.batch !== o.batch || d.rules !== o.rules || d.ips !== o.ips) {
                     if(d.id) changesMsg.push(`📍 <b>Deploy ${i+1}:</b> ${d.id} (${d.batch})`);
                 }
             });
 
-            const saveObj = { ...oldCloudData, deploys: newDeploys, filter: document.getElementById('filterKeyword').value, timestamp: new Date().toLocaleString() };
+            const filter = document.getElementById('filterKeyword').value;
+            const saveObj = { ...oldCloudData, deploys: newDeploys, filter: filter, timestamp: new Date().toLocaleString() };
+            
             document.getElementById('loadingOverlay').style.display = 'flex';
             await db.ref(`ems4/plans/${currentPlatform}/current`).set(saveObj);
 
@@ -278,6 +287,7 @@
         function checkAccess() { const k = document.getElementById('accessKey').value; if(k === ADMIN_KEY || k === SUPER_KEY) { localStorage.setItem('ems4_key', k); location.reload(); } }
         function logout() { localStorage.removeItem('ems4_key'); location.reload(); }
         function changePlat(p) { if(userRole !== 'viewer') selectPlatform(p); }
+        function toggleRotation() { document.getElementById('rotationBox').classList.toggle('hidden'); }
         function checkStatsChange() { if(userRole === 'super') document.getElementById('updateStatsBtn').disabled = false; }
     </script>
 </body>
