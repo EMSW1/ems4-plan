@@ -3,344 +3,321 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EMS4 | Smart Cloud Sync</title>
+    <title>EMS4 | Ultimate Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
-        .deploy-card { transition: all 0.2s ease; border-left: 5px solid #e2e8f0; }
-        .plat-btn.active { border-color: #2563eb; background-color: #eff6ff; color: #2563eb; ring: 4px; ring-color: #eff6ff; }
-        #loadingOverlay, #loginOverlay { background: rgba(255,255,255,0.95); position: fixed; inset: 0; z-index: 200; align-items: center; justify-content: center; display: flex; }
-        #loadingOverlay { display: none; z-index: 210; }
-        .history-item { transition: all 0.2s; border-left: 4px solid transparent; }
-        .history-item:hover { border-left-color: #2563eb; background-color: #f8fafc; }
-        .viewer-mode .admin-only, .viewer-mode .super-only, .viewer-mode .platform-selector, .viewer-mode #roleLabel, .viewer-mode #roleBadge { display: none !important; }
+        .deploy-card { transition: all 0.2s ease; border-left: 5px solid #cbd5e1; }
+        .plat-btn.active { border-color: #2563eb; background-color: #eff6ff; color: #2563eb; }
+        #loadingOverlay, #loginOverlay { background: rgba(255,255,255,0.98); position: fixed; inset: 0; z-index: 200; align-items: center; justify-content: center; display: flex; flex-direction: column; }
+        .viewer-mode .admin-only, .viewer-mode .super-only { display: none !important; }
         .admin-mode .super-only { display: none !important; }
-        #saveBtn:disabled, #updateStatsBtn:disabled { background-color: #cbd5e1; cursor: not-allowed; opacity: 0.7; }
-        .readonly-stat { pointer-events: none !important; background-color: #f1f5f9 !important; border-color: #e2e8f0 !important; }
-        .rot-label { background: #eff6ff; border: 1px solid #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800; text-align: center; }
+        .admin-locked { pointer-events: none; background: #f8fafc !important; }
+        #saveBtn:disabled { opacity: 0.5; cursor: not-allowed; background: #94a3b8; border-color: #64748b; }
+        #rotDetailPanel { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 300; width: 90%; max-width: 450px; }
     </style>
 </head>
-<body class="bg-slate-100 p-4 md:p-8 font-sans text-slate-900">
+<body class="bg-slate-50 p-4 md:p-8 text-slate-900">
 
-    <div id="loginOverlay" style="display: none;">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl border border-slate-200 w-full max-w-sm text-center">
-            <h2 class="text-2xl font-black italic mb-6 text-blue-600 tracking-tighter uppercase font-black">Access Control</h2>
-            <input type="password" id="accessKey" placeholder="Enter Key..." class="w-full p-4 border-2 rounded-2xl mb-4 text-center font-bold outline-none">
-            <button onclick="checkAccess()" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black uppercase">Login</button>
-        </div>
-    </div>
-    
-    <div id="loadingOverlay">
-        <div class="flex flex-col items-center">
-            <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <div class="font-black text-blue-600 uppercase tracking-widest text-xs">Syncing Cloud...</div>
+    <div id="loginOverlay">
+        <div class="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-sm text-center border">
+            <h2 class="text-3xl font-black italic text-blue-600 mb-6 uppercase tracking-tighter">EMS4 ACCESS</h2>
+            <input type="password" id="accessKey" onkeypress="if(event.key==='Enter') checkAccess()" placeholder="PASSWORD" class="w-full p-4 border-2 rounded-2xl mb-4 text-center font-bold outline-none focus:border-blue-500">
+            <button onclick="checkAccess()" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black uppercase shadow-lg">Login</button>
         </div>
     </div>
 
-    <div id="appContent" class="hidden max-w-6xl mx-auto">
-        <header class="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-blue-600 mb-4 flex justify-between items-center">
-            <h1 class="text-2xl font-black italic uppercase tracking-tighter">EMS4 PLAN</h1>
-            <div class="flex gap-4 items-center">
-                <div class="text-right">
-                    <div id="roleLabel" class="text-[9px] font-black text-slate-400 uppercase mb-1">---</div>
-                    <span id="roleBadge" class="text-white px-2 py-0.5 rounded text-[8px] font-black uppercase">---</span>
-                </div>
-                <button onclick="logout()" class="admin-only text-[10px] text-red-500 font-bold underline">Logout</button>
+    <div id="rotDetailPanel" class="bg-white p-6 rounded-3xl shadow-2xl border-2 border-blue-600">
+        <h3 class="text-lg font-black mb-4 uppercase italic text-blue-600 flex justify-between">Rotation Details <button onclick="closeRot()" class="text-slate-400">✕</button></h3>
+        <textarea id="rotDetailText" oninput="checkChanges()" class="w-full h-64 p-3 bg-slate-50 border rounded-xl font-mono text-xs uppercase outline-none"></textarea>
+        <button onclick="closeRot()" class="w-full mt-4 bg-slate-800 text-white py-3 rounded-xl font-black uppercase">Close</button>
+    </div>
+
+    <div id="loadingOverlay" style="display:none;"><div class="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div></div>
+
+    <div id="appContent" class="hidden max-w-6xl mx-auto space-y-6">
+        <header class="bg-white p-5 rounded-2xl shadow-sm border-b-4 border-blue-600 flex justify-between items-center">
+            <h1 class="text-2xl font-black italic uppercase">EMS4 <span class="text-blue-600">PLANNER</span></h1>
+            <div class="flex items-center gap-4">
+                <span id="roleBadge" class="text-[10px] font-black px-3 py-1 rounded-full uppercase text-white bg-slate-400">---</span>
+                <button onclick="logout()" class="admin-only text-xs text-red-500 font-bold underline">Logout</button>
             </div>
         </header>
 
-        <div class="platform-selector grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <button onclick="selectPlatform('WEB')" id="btn-WEB" class="plat-btn bg-white p-5 rounded-2xl shadow-sm border-2 font-black text-slate-600 uppercase italic">Web <br> <span class="text-[10px] text-blue-500 not-italic" id="label-WEB">Total: 100</span></button>
-            <button onclick="selectPlatform('SELENIUM')" id="btn-SELENIUM" class="plat-btn bg-white p-5 rounded-2xl shadow-sm border-2 font-black text-slate-600 uppercase italic">Selenium <br> <span class="text-[10px] text-blue-500 not-italic" id="label-SELENIUM">Total: 75</span></button>
-            <button onclick="selectPlatform('AUTOMAT')" id="btn-AUTOMAT" class="plat-btn bg-white p-5 rounded-2xl shadow-sm border-2 font-black text-slate-600 uppercase italic">Automat <br> <span class="text-[10px] text-blue-500 not-italic" id="label-AUTOMAT">Total: 20</span></button>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button onclick="selectPlatform('WEB')" id="btn-WEB" class="plat-btn bg-white p-5 rounded-2xl shadow-sm border-2 font-black uppercase italic flex justify-center items-center">
+                WEB <input type="number" id="conf-WEB" class="w-10 ml-2 text-center bg-slate-100 rounded text-xs" onchange="updateGlobalConfig('WEB', this.value)" onclick="event.stopPropagation()" disabled>
+            </button>
+            <button onclick="selectPlatform('SELENIUM')" id="btn-SELENIUM" class="plat-btn bg-white p-5 rounded-2xl shadow-sm border-2 font-black uppercase italic flex justify-center items-center">
+                SELENIUM <input type="number" id="conf-SELENIUM" class="w-10 ml-2 text-center bg-slate-100 rounded text-xs" onchange="updateGlobalConfig('SELENIUM', this.value)" onclick="event.stopPropagation()" disabled>
+            </button>
+            <button onclick="selectPlatform('AUTOMAT')" id="btn-AUTOMAT" class="plat-btn bg-white p-5 rounded-2xl shadow-sm border-2 font-black uppercase italic flex justify-center items-center">
+                AUTOMAT <input type="number" id="conf-AUTOMAT" class="w-10 ml-2 text-center bg-slate-100 rounded text-xs" onchange="updateGlobalConfig('AUTOMAT', this.value)" onclick="event.stopPropagation()" disabled>
+            </button>
         </div>
 
-        <div id="platformContent" class="hidden space-y-6">
-            <div id="statsSection" class="w-full">
-                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-                    <div class="bg-blue-50 p-3 rounded-2xl border border-blue-200"><label class="block text-[9px] font-black text-blue-500 uppercase">Seeds</label><input type="text" id="statTotalSeeds" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-blue-700 outline-none" value="0"></div>
-                    <div class="bg-blue-50 p-3 rounded-2xl border border-blue-200"><label class="block text-[9px] font-black text-blue-500 uppercase">RDPs</label><input type="text" id="statRDPs" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-blue-700 outline-none" value="0"></div>
-                    <div class="bg-blue-50 p-3 rounded-2xl border border-blue-200"><label class="block text-[9px] font-black text-blue-500 uppercase">Sessions</label><input type="text" id="statSessions" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-blue-700 outline-none" value="0"></div>
-                    <div class="bg-blue-50 p-3 rounded-2xl border border-blue-200 text-center relative">
-                        <label class="block text-[9px] font-black text-blue-500 uppercase">Rotation</label>
-                        <div class="flex justify-center items-center gap-1 font-black text-blue-700"><input type="number" id="rotMin" oninput="checkStatsChange()" class="stat-input w-8 bg-transparent text-center" value="0"><span>-</span><input type="number" id="rotMax" oninput="checkStatsChange()" class="stat-input w-8 bg-transparent text-center" value="0"></div>
-                        <button onclick="toggleRotation()" class="mt-1 text-[8px] bg-blue-600 text-white px-2 py-0.5 rounded font-black uppercase">Detail</button>
-                    </div>
-                    <div class="bg-emerald-50 p-3 rounded-2xl border border-emerald-100 text-center"><label class="text-[9px] font-black text-emerald-500 uppercase">Quality</label><input type="text" id="statQualityVal" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-emerald-700 text-center outline-none" value="0"></div>
-                    <div class="bg-rose-50 p-3 rounded-2xl border border-rose-100 text-center"><label class="text-[9px] font-black text-rose-500 uppercase">Paused</label><input type="text" id="statPausedVal" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-rose-700 text-center outline-none" value="0"></div>
-                    <div class="bg-orange-50 p-3 rounded-2xl border border-orange-100 text-center">
-                        <label class="block text-[9px] font-black text-orange-500 uppercase italic">Period</label>
-                        <div class="flex gap-1 justify-center"><input type="text" id="statDateStart" oninput="checkStatsChange()" class="stat-input w-12 bg-transparent text-[9px] font-bold text-orange-700 text-center outline-none" placeholder="Start"><span class="text-orange-300">-</span><input type="text" id="statDateEnd" oninput="checkStatsChange()" class="stat-input w-12 bg-transparent text-[9px] font-bold text-orange-700 text-center outline-none" placeholder="End"></div>
-                    </div>
+        <div id="statsSection" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            <div class="p-2 bg-blue-50 rounded border"><label class="block text-[9px] font-black text-blue-400 uppercase">Seeds</label><input type="text" id="statSeeds" oninput="checkChanges()" class="stat-field w-full bg-transparent font-black text-blue-700 outline-none text-sm uppercase"></div>
+            <div class="p-2 bg-blue-50 rounded border"><label class="block text-[9px] font-black text-blue-400 uppercase">RDPs</label><input type="text" id="statRDPs" oninput="checkChanges()" class="stat-field w-full bg-transparent font-black text-blue-700 outline-none text-sm uppercase"></div>
+            <div class="p-2 bg-blue-50 rounded border"><label class="block text-[9px] font-black text-blue-400 uppercase">Sessions</label><input type="text" id="statSessions" oninput="checkChanges()" class="stat-field w-full bg-transparent font-black text-blue-700 outline-none text-sm uppercase"></div>
+            <div class="p-2 bg-blue-50 rounded border text-center">
+                <label class="block text-[9px] font-black text-blue-400 uppercase">Rotation</label>
+                <div class="flex justify-center gap-1 font-bold text-blue-700 text-sm mb-1">
+                    <input type="number" id="rotMin" oninput="checkChanges()" class="stat-field w-6 bg-transparent text-center">-<input type="number" id="rotMax" oninput="checkChanges()" class="stat-field w-6 bg-transparent text-center">
                 </div>
-                
-                <div id="rotationBox" class="hidden mt-3 p-4 bg-white rounded-xl border-2 border-blue-100 shadow-lg">
-                    <div class="super-only">
-                        <label class="block text-[10px] font-black text-blue-500 uppercase mb-2 italic">Edit Rotation</label>
-                        <textarea id="rotationRawData" oninput="checkStatsChange(); renderRotationLabels(this.value);" class="w-full p-3 border rounded text-xs font-mono bg-slate-50 outline-none" rows="5"></textarea>
-                    </div>
-                    <div class="mt-2">
-                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 italic">Rotation View</label>
-                        <div id="rotationLabelsGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"></div>
-                    </div>
-                </div>
-                <button id="updateStatsBtn" onclick="saveStatsOnly()" class="super-only mt-2 w-full bg-slate-800 text-white py-2 rounded-xl text-[10px] font-black uppercase">Update Stats Only</button>
+                <button onclick="openRot()" class="bg-blue-600 text-white text-[8px] px-2 py-0.5 rounded font-black uppercase">Détail</button>
             </div>
+            <div class="p-2 bg-emerald-50 rounded border"><label class="block text-[9px] font-black text-emerald-400 uppercase">Quality</label><input type="text" id="statQuality" oninput="checkChanges()" class="stat-field w-full bg-transparent font-black text-emerald-700 text-center outline-none text-sm uppercase"></div>
+            <div class="p-2 bg-rose-50 rounded border"><label class="block text-[9px] font-black text-rose-400 uppercase">Paused</label><input type="text" id="statPaused" oninput="checkChanges()" class="stat-field w-full bg-transparent font-black text-rose-700 text-center outline-none text-sm uppercase"></div>
+            <div class="p-2 bg-orange-50 rounded border"><label class="block text-[9px] font-black text-orange-400 uppercase">Period</label><div class="flex gap-1"><input type="text" id="statStart" oninput="checkChanges()" class="stat-field w-full bg-transparent font-bold text-orange-700 text-[10px] text-center outline-none uppercase" placeholder="S"><input type="text" id="statEnd" oninput="checkChanges()" class="stat-field w-full bg-transparent font-bold text-orange-700 text-[10px] text-center outline-none uppercase" placeholder="E"></div></div>
+        </div>
 
-            <div class="bg-white p-6 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6 border border-slate-200">
-                <div class="admin-only">
-                    <label class="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">Deploys Count</label>
-                    <input type="number" id="deployCount" oninput="generateDeploys(); checkIfChanged();" class="w-full p-2 border-2 rounded-lg font-black text-blue-600 text-lg text-center">
+        <div class="bg-white p-5 rounded-2xl shadow-sm border grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+            <div class="flex gap-4 items-center">
+                <div class="admin-only w-1/3">
+                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Count</label>
+                    <input type="number" id="deployCount" oninput="renderDeploys(); checkChanges();" class="w-full p-2 border-2 rounded-lg font-black text-blue-600 text-center">
                 </div>
-                <div>
-                    <label class="block text-[10px] font-black text-blue-500 mb-1 uppercase italic">🔑 Filter (ID/Code Mot)</label>
-                    <input type="text" id="filterKeyword" oninput="applyFilter(this.value); checkIfChanged();" class="w-full p-2 border-2 border-blue-100 rounded-lg font-bold text-blue-700 bg-blue-50 text-center uppercase">
-                </div>
-                <div class="p-3 bg-slate-50 rounded-xl text-center flex flex-col justify-center">
-                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Distribution</span>
-                    <div id="distOutput" class="text-[11px] font-black text-blue-700 mt-1"></div>
+                <div class="w-2/3">
+                    <label class="block text-[10px] font-black text-blue-500 uppercase mb-1 italic text-center">KEYWORD (MOT)</label>
+                    <input type="text" id="filterInput" oninput="checkChanges()" class="w-full p-2 border-2 border-blue-500 rounded-lg font-black text-blue-700 bg-blue-50 text-center uppercase">
                 </div>
             </div>
-
-            <div id="deploysContainer" class="space-y-4"></div>
-
-            <div class="admin-only sticky bottom-4 z-10 shadow-2xl">
-                <button id="saveBtn" disabled onclick="processSave()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-black text-xl border-b-4 border-blue-800 uppercase italic">Save Changes & Notify Group</button>
+            <div class="text-center bg-slate-50 p-2 rounded-xl border border-dashed border-slate-300 uppercase italic text-[10px] font-bold text-slate-600">
+                <div id="distDisplay">---</div>
             </div>
+        </div>
 
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 mt-10 overflow-hidden mb-20">
-                <div class="bg-slate-900 p-4 flex justify-between items-center">
-                    <h2 class="text-white font-black italic text-sm uppercase tracking-widest flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        Last Updates History
-                    </h2>
-                </div>
-                <div id="historyList" class="divide-y divide-slate-100 max-h-[400px] overflow-y-auto bg-white"></div>
-            </div>
+        <div id="deploysGrid" class="space-y-4"></div>
+
+        <div class="admin-only sticky bottom-4 flex gap-2">
+            <button id="saveBtn" disabled onclick="saveAll()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-black text-xl shadow-2xl border-b-4 border-blue-800 uppercase italic">Save & Send Update</button>
+            <button id="superSaveBtn" onclick="superQuickSave()" class="super-only hidden bg-purple-600 hover:bg-purple-700 text-white px-6 py-5 rounded-2xl font-black text-sm shadow-2xl border-b-4 border-purple-800 uppercase italic whitespace-nowrap italic">⚡ Edit Only</button>
         </div>
     </div>
 
     <script>
-        const ADMIN_KEY = "admin75"; const SUPER_KEY = "super2025";
-        const firebaseConfig = { apiKey: "AIzaSyAFR96bibEGLaMroqFZCLcSHyCoAdewz78", authDomain: "ems4-reporting.firebaseapp.com", databaseURL: "https://ems4-reporting-default-rtdb.firebaseio.com", projectId: "ems4-reporting" };
-        firebase.initializeApp(firebaseConfig); const db = firebase.database();
-        const telegramToken = '8445418590:AAEzun8AqYrkmFnzMoXaz3UBIQRTQCgQHeI'; 
-        const telegramChatId = '-5224398844';
-        const githubBase = "https://emsw1.github.io/ems4-plan";
-
-        let userRole = "viewer"; let currentPlatform = ""; let oldCloudData = null;
-        let boitesConfig = { WEB: 100, SELENIUM: 75, AUTOMAT: 20 };
-
-        window.onload = async function() {
-            const savedKey = localStorage.getItem('ems4_key');
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('mode') === 'view' || urlParams.get('plat')) {
-                userRole = "viewer"; document.body.classList.add('viewer-mode');
-                if(urlParams.get('plat')) selectPlatform(urlParams.get('plat'));
-                document.getElementById('appContent').classList.remove('hidden');
-            } else if (savedKey === SUPER_KEY || savedKey === ADMIN_KEY) {
-                userRole = (savedKey === SUPER_KEY) ? "super" : "admin";
-                if(userRole === 'admin') document.body.classList.add('admin-mode');
-                startApp();
-            } else { document.getElementById('loginOverlay').style.display = 'flex'; }
+        const CONFIG = {
+            adminKey: "admin75", superKey: "super2025",
+            firebase: { apiKey: "AIzaSyAFR96bibEGLaMroqFZCLcSHyCoAdewz78", authDomain: "ems4-reporting.firebaseapp.com", databaseURL: "https://ems4-reporting-default-rtdb.firebaseio.com", projectId: "ems4-reporting" },
+            telegram: { token: '8445418590:AAEzun8AqYrkmFnzMoXaz3UBIQRTQCgQHeI', chatId: '-5224398844' }
         };
 
-        function startApp() {
+        firebase.initializeApp(CONFIG.firebase); const db = firebase.database();
+        let userRole = "viewer"; let currentPlatform = ""; let stateData = { deploys: [], stats: {}, filter: "" };
+        let boitesConfig = { WEB: 100, SELENIUM: 75, AUTOMAT: 20 };
+
+        window.onload = async () => {
+            const key = localStorage.getItem('ems4_key');
+            if(key === CONFIG.adminKey || key === CONFIG.superKey) {
+                userRole = (key === CONFIG.superKey) ? "super" : "admin";
+                if(userRole === 'admin') document.body.classList.add('admin-mode');
+                await initApp();
+            } else {
+                const params = new URLSearchParams(window.location.search);
+                if(params.get('mode') === 'view') { userRole = "viewer"; document.body.classList.add('viewer-mode'); await initApp(); if(params.get('plat')) selectPlatform(params.get('plat')); }
+                else { document.getElementById('loginOverlay').style.display = 'flex'; }
+            }
+        };
+
+        async function initApp() {
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('appContent').classList.remove('hidden');
-            document.getElementById('roleBadge').innerText = userRole.toUpperCase();
-            document.getElementById('roleLabel').innerText = `ROLE: ${userRole.toUpperCase()}`;
-            if(userRole === 'admin') {
-                document.querySelectorAll('.stat-input').forEach(el => { el.readOnly = true; el.classList.add('readonly-stat'); });
+            const badge = document.getElementById('roleBadge');
+            badge.innerText = userRole.toUpperCase();
+            
+            if(userRole === 'super') {
+                badge.classList.add('bg-purple-600');
+                document.querySelectorAll('.super-only').forEach(el => el.classList.remove('hidden'));
+                document.querySelectorAll('input[type=number]').forEach(i => i.disabled = false);
+            } else {
+                badge.classList.add(userRole==='admin'?'bg-blue-600':'bg-slate-400');
             }
+
+            if(userRole !== 'super') {
+                document.querySelectorAll('.stat-field').forEach(i => i.classList.add('admin-locked'));
+                document.getElementById('rotDetailText').readOnly = true;
+            }
+
+            const confSnap = await db.ref('ems4/config/boites').once('value');
+            if(confSnap.exists()) boitesConfig = confSnap.val();
+            ['WEB','SELENIUM','AUTOMAT'].forEach(p => document.getElementById('conf-'+p).value = boitesConfig[p]);
+            if(userRole !== 'viewer') selectPlatform('WEB');
         }
 
         async function selectPlatform(p) {
             currentPlatform = p;
             document.getElementById('loadingOverlay').style.display = 'flex';
-            document.querySelectorAll('.plat-btn').forEach(b => b.classList.remove('active', 'border-blue-600', 'text-blue-600'));
-            if(document.getElementById('btn-'+p)) document.getElementById('btn-'+p).classList.add('active', 'border-blue-600', 'text-blue-600');
-            document.getElementById('platformContent').classList.remove('hidden'); 
+            document.querySelectorAll('.plat-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-'+p).classList.add('active');
 
             const snap = await db.ref(`ems4/plans/${p}/current`).once('value');
-            oldCloudData = snap.val() || { deploys: [], stats: {}, filter: "" };
+            stateData = snap.val() || { deploys: [], stats: {}, filter: "" };
+            if(!stateData.deploys) stateData.deploys = [];
+            if(!stateData.stats) stateData.stats = {};
             
-            // Render Stats
-            const s = oldCloudData.stats || {};
-            document.getElementById('statTotalSeeds').value = s.seeds || '0';
-            document.getElementById('statRDPs').value = s.rdps || '0';
-            document.getElementById('statSessions').value = s.sessions || '0';
-            document.getElementById('rotMin').value = s.rotMin || 0;
-            document.getElementById('rotMax').value = s.rotMax || 0;
-            document.getElementById('statQualityVal').value = s.qualityVal || '0';
-            document.getElementById('statPausedVal').value = s.pausedVal || '0';
-            document.getElementById('statDateStart').value = s.dateStart || '';
-            document.getElementById('statDateEnd').value = s.dateEnd || '';
-            document.getElementById('rotationRawData').value = s.rotationRaw || "";
-            renderRotationLabels(s.rotationRaw || "");
+            const s = stateData.stats;
+            document.getElementById('statSeeds').value = s.seeds || '';
+            document.getElementById('statRDPs').value = s.rdps || '';
+            document.getElementById('statSessions').value = s.sessions || '';
+            document.getElementById('rotMin').value = s.rotMin || '';
+            document.getElementById('rotMax').value = s.rotMax || '';
+            document.getElementById('statQuality').value = s.quality || '';
+            document.getElementById('statPaused').value = s.paused || '';
+            document.getElementById('statStart').value = s.start || '';
+            document.getElementById('statEnd').value = s.end || '';
+            document.getElementById('rotDetailText').value = s.rotDetails || '';
+            document.getElementById('filterInput').value = stateData.filter || "";
+            document.getElementById('deployCount').value = (stateData.deploys.length > 0) ? stateData.deploys.length : 8;
             
-            // Render Controls
-            document.getElementById('filterKeyword').value = oldCloudData.filter || "";
-            document.getElementById('deployCount').value = oldCloudData.deploys ? oldCloudData.deploys.length : 8;
-            
-            generateDeploys(oldCloudData.deploys);
-            applyFilter(document.getElementById('filterKeyword').value);
-            loadHistory();
+            renderDeploys(stateData.deploys);
+            checkChanges();
             document.getElementById('loadingOverlay').style.display = 'none';
         }
 
-        function generateDeploys(savedData = null) {
+        function renderDeploys(savedDeploys = null) {
             const num = parseInt(document.getElementById('deployCount').value) || 0;
-            const container = document.getElementById('deploysContainer'); container.innerHTML = "";
-            const totalB = boitesConfig[currentPlatform] || 100;
-            const base = Math.floor(totalB / num);
-            const remainder = totalB % num;
-            let distArray = [];
+            const container = document.getElementById('deploysGrid'); container.innerHTML = "";
+            const total = boitesConfig[currentPlatform] || 100;
+            const base = Math.floor(total / num); const rem = total % num;
+            let dist = [];
 
             for (let i = 0; i < num; i++) {
-                const bCount = base + (i < remainder ? 1 : 0);
-                distArray.push(bCount);
-                const d = (savedData && savedData[i]) ? savedData[i] : { from: '', id: '', batch: '10/3000P', rules: 'SELECT ALL IPS', ips: '' };
+                const bCount = base + (i < rem ? 1 : 0); dist.push(bCount);
+                const d = (savedDeploys && savedDeploys[i]) ? savedDeploys[i] : { from: '', id: '', batch: '10/3000P', rules: 'SELECT ALL IPS', ips: '' };
                 container.innerHTML += `
-                <div class="deploy-card bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                    <div class="flex justify-between items-center mb-4 border-b pb-2 text-[10px] font-black">
-                        <span class="bg-slate-800 text-white px-3 py-1 rounded-full uppercase italic">DEPLOY ${i+1}</span>
-                        <span class="text-blue-600 underline">${bCount} BOITES</span>
+                <div class="deploy-card bg-white p-4 rounded-xl shadow-sm border relative">
+                    <div class="flex justify-between items-center mb-3 border-b pb-2">
+                        <span class="bg-slate-800 text-white text-[10px] font-black px-2 py-1 rounded uppercase italic">Deploy ${i+1}</span>
+                        <span class="text-blue-600 font-bold text-xs underline">${bCount} Boites</span>
                     </div>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
-                        <input type="text" oninput="checkIfChanged()" class="from-val p-2 border rounded text-xs font-bold uppercase" value="${d.from}" placeholder="FROM">
-                        <input type="text" oninput="checkIfChanged()" class="id-val p-2 border rounded text-xs font-black text-blue-600 uppercase" value="${d.id}" placeholder="ID">
-                        <select onchange="checkIfChanged()" class="batch-val p-2 border rounded text-xs uppercase font-bold">
-                            <option value="0/0 Parallel" ${d.batch=='0/0 Parallel'?'selected':''}>0/0 Parallel</option>
-                            <option value="3/3000P" ${d.batch=='3/3000P'?'selected':''}>3/3000P</option>
-                            <option value="5/3000P" ${d.batch=='5/3000P'?'selected':''}>5/3000P</option>
-                            <option value="10/3000P" ${d.batch=='10/3000P'?'selected':''}>10/3000P</option>
-                            <option value="20/3000P" ${d.batch=='20/3000P'?'selected':''}>20/3000P</option>
-                            <option value="30/3000P" ${d.batch=='30/3000P'?'selected':''}>30/3000P</option>
+                        <input type="text" oninput="checkChanges()" class="inp-from p-2 border rounded text-xs font-bold uppercase" value="${d.from || ''}">
+                        <input type="text" oninput="checkChanges()" class="inp-id p-2 border rounded text-xs font-black text-blue-600 bg-blue-50 uppercase" value="${d.id || ''}">
+                        <select onchange="checkChanges()" class="inp-batch p-2 border rounded text-[10px] font-bold uppercase">
+                            ${['0/0 Parallel','3/3000P','5/3000P','10/3000P','20/3000P','30/3000P'].map(o => `<option value="${o}" ${d.batch===o?'selected':''}>${o}</option>`).join('')}
                         </select>
-                        <select onchange="checkIfChanged()" class="rules-val p-2 border rounded text-xs uppercase font-bold">
-                            <option value="SELECT ALL IPS" ${d.rules=='SELECT ALL IPS'?'selected':''}>SELECT ALL IPS</option>
-                            <option value="SELECT 30 IPS MAX" ${d.rules=='SELECT 30 IPS MAX'?'selected':''}>SELECT 30 IPS MAX</option>
-                            <option value="RANDOM ON SELECTED" ${d.rules=='RANDOM ON SELECTED'?'selected':''}>RANDOM ON SELECTED</option>
-                            <option value="RANDOM ON SERVER SELECTED" ${d.rules=='RANDOM ON SERVER SELECTED'?'selected':''}>RANDOM ON SERVER SELECTED</option>
-                            <option value="2 ips RANDOM ON SERVER SELECTED" ${d.rules=='2 ips RANDOM ON SERVER SELECTED'?'selected':''}>2 ips RANDOM ON SERVER SELECTED</option>
+                        <select onchange="checkChanges()" class="inp-rules p-2 border rounded text-[10px] font-bold uppercase">
+                            ${['SELECT ALL IPS','SELECT 30 IPS MAX','RANDOM ON SELECTED','RANDOM ON SERVER SELECTED'].map(o => `<option value="${o}" ${d.rules===o?'selected':''}>${o}</option>`).join('')}
                         </select>
                     </div>
-                    <textarea oninput="checkIfChanged()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50 uppercase" rows="${userRole==='viewer'?3:1}">${d.ips || ''}</textarea>
+                    <textarea oninput="checkChanges()" class="inp-ips w-full p-2 border rounded text-[10px] font-mono bg-slate-50 uppercase" rows="${userRole==='viewer'?4:1}">${d.ips || ''}</textarea>
                 </div>`;
             }
-            document.getElementById('distOutput').innerText = distArray.join(' | ');
+            document.getElementById('distDisplay').innerText = dist.join(' | ');
         }
 
-        function applyFilter(f) {
-            const cards = document.querySelectorAll('.deploy-card');
-            cards.forEach(card => {
-                const idVal = card.querySelector('.id-val').value.toUpperCase();
-                card.style.display = (!f || idVal.includes(f.toUpperCase())) ? 'block' : 'none';
-            });
-        }
+        function checkChanges() {
+            if(userRole === 'viewer') return;
+            let changed = false;
+            if(document.getElementById('filterInput').value !== (stateData.filter || "")) changed = true;
+            if(parseInt(document.getElementById('deployCount').value) !== (stateData.deploys.length)) changed = true;
 
-        function checkIfChanged() {
-            if (userRole === 'viewer') return;
-            const cards = document.querySelectorAll('.deploy-card');
-            let hasChanges = false;
-            const currentFilter = document.getElementById('filterKeyword').value;
-            
-            if (currentFilter !== oldCloudData.filter || cards.length !== (oldCloudData.deploys?.length || 0)) {
-                hasChanges = true;
-            } else {
-                cards.forEach((c, i) => {
-                    const old = oldCloudData.deploys[i] || {};
-                    if (c.querySelector('.from-val').value !== old.from || c.querySelector('.id-val').value !== old.id || 
-                        c.querySelector('.batch-val').value !== old.batch || c.querySelector('.rules-val').value !== old.rules || 
-                        c.querySelector('.ips-val').value !== old.ips) hasChanges = true;
-                });
+            const s = stateData.stats || {};
+            const currentStats = {
+                seeds: document.getElementById('statSeeds').value, rdps: document.getElementById('statRDPs').value,
+                paused: document.getElementById('statPaused').value, rotDetails: document.getElementById('rotDetailText').value
+            };
+            if(currentStats.seeds !== (s.seeds || "") || currentStats.rdps !== (s.rdps || "") || currentStats.paused !== (s.paused || "") || currentStats.rotDetails !== (s.rotDetails || "")) changed = true;
+
+            if(!changed) {
+                const cards = document.querySelectorAll('.deploy-card');
+                for(let i=0; i<cards.length; i++) {
+                    const o = stateData.deploys[i] || {};
+                    const cur = { 
+                        from: cards[i].querySelector('.inp-from').value, id: cards[i].querySelector('.inp-id').value, 
+                        batch: cards[i].querySelector('.inp-batch').value, rules: cards[i].querySelector('.inp-rules').value, 
+                        ips: cards[i].querySelector('.inp-ips').value 
+                    };
+                    if(cur.id !== (o.id || "") || cur.from !== (o.from || "") || cur.batch !== (o.batch || "") || cur.rules !== (o.rules || "") || cur.ips !== (o.ips || "")) { changed = true; break; }
+                }
             }
-            document.getElementById('saveBtn').disabled = !hasChanges;
+            document.getElementById('saveBtn').disabled = !changed;
         }
 
-        async function processSave() {
-            const cards = Array.from(document.querySelectorAll('.deploy-card'));
-            const newData = cards.map(c => ({ 
-                from: c.querySelector('.from-val').value.trim(), id: c.querySelector('.id-val').value.trim(), 
-                batch: c.querySelector('.batch-val').value, rules: c.querySelector('.rules-val').value, 
-                ips: c.querySelector('.ips-val').value.trim() 
+        async function saveAll() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            const cards = document.querySelectorAll('.deploy-card');
+            const deploys = Array.from(cards).map(c => ({
+                from: c.querySelector('.inp-from').value.trim(), id: c.querySelector('.inp-id').value.trim(),
+                batch: c.querySelector('.inp-batch').value, rules: c.querySelector('.inp-rules').value, ips: c.querySelector('.inp-ips').value.trim()
             }));
 
-            let changesLog = [];
-            newData.forEach((d, i) => {
-                const o = oldCloudData.deploys?.[i] || {};
+            const filter = document.getElementById('filterInput').value.trim();
+            const stats = {
+                seeds: document.getElementById('statSeeds').value, rdps: document.getElementById('statRDPs').value,
+                sessions: document.getElementById('statSessions').value, rotMin: document.getElementById('rotMin').value,
+                rotMax: document.getElementById('rotMax').value, quality: document.getElementById('statQuality').value,
+                paused: document.getElementById('statPaused').value, start: document.getElementById('statStart').value,
+                end: document.getElementById('statEnd').value, rotDetails: document.getElementById('rotDetailText').value
+            };
+
+            let logChanges = [];
+            if(filter !== (stateData.filter || "")) logChanges.push(`🔍 Keyword: ${filter || 'NONE'}`);
+            if(stats.paused !== (stateData.stats?.paused || "")) logChanges.push(`⏸ Paused: ${stats.paused}`);
+
+            deploys.forEach((d, i) => {
+                const o = stateData.deploys[i] || {};
                 let diffs = [];
-                if (d.from !== o.from) diffs.push("From"); if (d.id !== o.id) diffs.push("ID");
-                if (d.batch !== o.batch) diffs.push("Batch"); if (d.rules !== o.rules) diffs.push("Rules");
-                if (d.ips !== o.ips) diffs.push("IPs");
-                if (diffs.length > 0) changesLog.push(`\n📍 Deploy ${i+1} (${d.id || 'N/A'}): ${diffs.join(', ')}`);
+                if(d.id !== (o.id || "")) diffs.push("ID");
+                if(d.from !== (o.from || "")) diffs.push("FROM");
+                if(d.batch !== (o.batch || "")) diffs.push("BATCH");
+                if(d.rules !== (o.rules || "")) diffs.push("RULES");
+                if(d.ips !== (o.ips || "")) diffs.push("IPs");
+                if(diffs.length > 0) logChanges.push(`📍 D${i+1} (${d.id || 'Empty'}): ${diffs.join(', ')} updated`);
             });
 
-            const timestamp = new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', '');
-            const saveObj = { ...oldCloudData, deploys: newData, filter: document.getElementById('filterKeyword').value, timestamp, summary: changesLog.join('') || "\n--> Plan Refreshed" };
+            await db.ref(`ems4/plans/${currentPlatform}/current`).set({ deploys, filter, stats, updatedAt: new Date().toLocaleString() });
 
-            document.getElementById('loadingOverlay').style.display = 'flex';
-            await db.ref(`ems4/plans/${currentPlatform}/current`).set(saveObj);
-            await db.ref(`ems4/plans/${currentPlatform}/history`).push(saveObj);
+            if(logChanges.length > 0) {
+                const baseUrl = window.location.href.split('?')[0];
+                const viewLink = `${baseUrl}?mode=view&plat=${currentPlatform}`;
+                let changesText = ""; logChanges.forEach(l => { changesText += "• " + l + "\n"; });
 
-            if (changesLog.length > 0) {
-                const msg = `🚀 *UPDATE [#${currentPlatform}]*\n━━━━━━━━━━━━━━━\n🎯 Filter: ${saveObj.filter}\n🕒 Time: ${timestamp}\n📝 Changes: ${saveObj.summary}\n━━━━━━━━━━━━━━━\n🔗 ${githubBase}/?mode=view&plat=${currentPlatform}`;
-                await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, { 
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ chat_id: telegramChatId, text: msg, parse_mode: 'Markdown' }) 
-                });
+                const telegramMsg = `🚀 <b>UPDATE: #${currentPlatform}</b>\n━━━━━━━━━━━━━━━\n📝 <b>CHANGES:</b>\n${changesText}━━━━━━━━━━━━━━━\n🔗 <a href="${viewLink}">CLICK TO VIEW PLAN</a>`;
+
+                try {
+                    await fetch(`https://api.telegram.org/bot${CONFIG.telegram.token}/sendMessage`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chat_id: CONFIG.telegram.chatId, text: telegramMsg, parse_mode: 'HTML', disable_web_page_preview: false })
+                    });
+                } catch (e) { console.error("Telegram Error:", e); }
             }
-            location.reload();
+            setTimeout(() => { location.reload(); }, 500);
         }
 
-        function loadHistory() {
-            db.ref(`ems4/plans/${currentPlatform}/history`).limitToLast(10).on('value', snap => {
-                const list = document.getElementById('historyList'); list.innerHTML = "";
-                const data = snap.val(); if (!data) return;
-                Object.keys(data).reverse().forEach(k => {
-                    const item = data[k];
-                    list.innerHTML += `
-                    <div class="history-item p-4 flex justify-between items-start">
-                        <div class="overflow-hidden">
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-[10px] font-black bg-slate-100 px-2 py-0.5 rounded uppercase italic">${item.filter || 'NO-FILTER'}</span>
-                                <span class="text-[9px] text-slate-400 font-bold">${item.timestamp}</span>
-                            </div>
-                            <div class="text-[10px] text-red-600 font-bold uppercase leading-relaxed">${item.summary ? item.summary.replace(/\n/g, '<br>') : 'Updated'}</div>
-                        </div>
-                        <button onclick="loadHistoryToUI('${k}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-2 rounded-lg text-[9px] font-black transition">LOAD</button>
-                    </div>`;
-                });
-            });
-        }
-
-        async function loadHistoryToUI(key) {
-            document.getElementById('loadingOverlay').style.display = 'flex';
-            const snap = await db.ref(`ems4/plans/${currentPlatform}/history/${key}`).once('value');
-            const data = snap.val();
-            if (data) {
-                document.getElementById('deployCount').value = data.deploys.length;
-                document.getElementById('filterKeyword').value = data.filter || "";
-                generateDeploys(data.deploys);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
-
-        async function saveStatsOnly() {
+        async function superQuickSave() {
             if(userRole !== 'super') return;
-            const stats = { seeds: document.getElementById('statTotalSeeds').value, rdps: document.getElementById('statRDPs').value, sessions: document.getElementById('statSessions').value, rotMin: document.getElementById('rotMin').value, rotMax: document.getElementById('rotMax').value, qualityVal: document.getElementById('statQualityVal').value, pausedVal: document.getElementById('statPausedVal').value, dateStart: document.getElementById('statDateStart').value, dateEnd: document.getElementById('statDateEnd').value, rotationRaw: document.getElementById('rotationRawData').value };
-            await db.ref(`ems4/plans/${currentPlatform}/current/stats`).set(stats);
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            const cards = document.querySelectorAll('.deploy-card');
+            const deploys = Array.from(cards).map(c => ({
+                from: c.querySelector('.inp-from').value.trim(), id: c.querySelector('.inp-id').value.trim(),
+                batch: c.querySelector('.inp-batch').value, rules: c.querySelector('.inp-rules').value, ips: c.querySelector('.inp-ips').value.trim()
+            }));
+            const stats = {
+                seeds: document.getElementById('statSeeds').value, rdps: document.getElementById('statRDPs').value,
+                sessions: document.getElementById('statSessions').value, rotMin: document.getElementById('rotMin').value,
+                rotMax: document.getElementById('rotMax').value, quality: document.getElementById('statQuality').value,
+                paused: document.getElementById('statPaused').value, start: document.getElementById('statStart').value,
+                end: document.getElementById('statEnd').value, rotDetails: document.getElementById('rotDetailText').value
+            };
+            await db.ref(`ems4/plans/${currentPlatform}/current`).set({ deploys, filter: document.getElementById('filterInput').value.trim(), stats, updatedAt: new Date().toLocaleString() });
             location.reload();
         }
 
-        function checkAccess() { const k = document.getElementById('accessKey').value; if(k === ADMIN_KEY || k === SUPER_KEY) { localStorage.setItem('ems4_key', k); location.reload(); } }
+        async function updateGlobalConfig(plat, val) {
+            if(userRole !== 'super') return;
+            boitesConfig[plat] = parseInt(val) || 0;
+            await db.ref('ems4/config/boites').set(boitesConfig);
+            renderDeploys(stateData.deploys);
+            checkChanges();
+        }
+
+        function openRot() { document.getElementById('rotDetailPanel').style.display = 'block'; }
+        function closeRot() { document.getElementById('rotDetailPanel').style.display = 'none'; }
+        function checkAccess() { const k = document.getElementById('accessKey').value; if(k === CONFIG.adminKey || k === CONFIG.superKey) { localStorage.setItem('ems4_key', k); location.reload(); } }
         function logout() { localStorage.removeItem('ems4_key'); location.reload(); }
-        function toggleRotation() { document.getElementById('rotationBox').classList.toggle('hidden'); }
-        function renderRotationLabels(t) { const c = document.getElementById('rotationLabelsGrid'); c.innerHTML = ""; if(!t) return; t.split('\n').forEach(l => { if(l.trim()) c.innerHTML += `<div class="rot-label truncate">${l.trim()}</div>`; }); }
-        function checkStatsChange() { if(userRole === 'super') document.getElementById('updateStatsBtn').disabled = false; }
     </script>
 </body>
 </html>
