@@ -270,20 +270,39 @@
 
             await db.ref(`ems4/plans/${currentPlatform}/current`).set({ deploys, filter, stats, updatedAt: new Date().toLocaleString() });
 
-            if(logChanges.length > 0) {
-                const baseUrl = window.location.href.split('?')[0];
-                const viewLink = `${baseUrl}?mode=view&plat=${currentPlatform}`;
-                let changesText = ""; logChanges.forEach(l => { changesText += "• " + l + "\n"; });
 
-                const telegramMsg = `🚀 <b>UPDATE: #${currentPlatform}</b>\n━━━━━━━━━━━━━━━\n📝 <b>CHANGES:</b>\n${changesText}━━━━━━━━━━━━━━━\n🔗 <a href="${viewLink}">CLICK TO VIEW PLAN</a>`;
+
+
+if(logChanges.length > 0) {
+                // Hna fin kantsst3mlo dik netlifyBase dialk (Github Pages)
+                const publicUrl = "https://emsw1.github.io/ems4-plan"; // Hadu hya netlifyBase
+                const viewLink = `${publicUrl}/?mode=view&plat=${currentPlatform}`;
+                
+                let changesText = ""; 
+                logChanges.forEach(l => { changesText += "• " + l + "\n"; });
+
+                const telegramMsg = `🚀 <b>UPDATE: #${currentPlatform}</b>\n` +
+                                    `━━━━━━━━━━━━━━━\n` +
+                                    `📝 <b>CHANGES:</b>\n` +
+                                    `${changesText}` +
+                                    `━━━━━━━━━━━━━━━\n` +
+                                    `🔗 <b>VIEW PLAN:</b>\n` +
+                                    `${viewLink}`; 
 
                 try {
                     await fetch(`https://api.telegram.org/bot${CONFIG.telegram.token}/sendMessage`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ chat_id: CONFIG.telegram.chatId, text: telegramMsg, parse_mode: 'HTML', disable_web_page_preview: false })
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            chat_id: CONFIG.telegram.chatId, 
+                            text: telegramMsg, 
+                            parse_mode: 'HTML', 
+                            disable_web_page_preview: false 
+                        })
                     });
                 } catch (e) { console.error("Telegram Error:", e); }
             }
+
             setTimeout(() => { location.reload(); }, 500);
         }
 
