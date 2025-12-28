@@ -16,11 +16,35 @@
         .admin-locked { pointer-events: none; background: #f8fafc !important; }
         #saveBtn:disabled { opacity: 0.5; cursor: not-allowed; background: #94a3b8; border-color: #64748b; }
         #rotDetailPanel { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 300; width: 90%; max-width: 450px; }
+
+        /* --- VIEWER MODE OPTIMIZATION --- */
+        .viewer-mode #statsSection, 
+        .viewer-mode #historySection,
+        .viewer-mode header,
+        .viewer-mode .admin-only { display: none !important; }
+        
+        /* Hidde other platforms in target mode */
+        .target-only .plat-btn:not(.active) { display: none !important; }
+
+        /* Style inputs in viewer mode to look like plain text */
+        .viewer-mode input, .viewer-mode select, .viewer-mode textarea {
+            border: none !important;
+            background: transparent !important;
+            pointer-events: none !important;
+            color: #1e293b !important;
+            padding-left: 0 !important;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        .viewer-mode .inp-id { color: #2563eb !important; font-weight: 900 !important; }
+        .viewer-mode .deploy-card { border-left: 5px solid #2563eb; box-shadow: none; border-bottom: 1px solid #e2e8f0; }
+        .viewer-mode .grid-cols-1.md\:grid-cols-3 { display: none !important; }
     </style>
 </head>
 <body class="bg-slate-50 p-4 md:p-8 text-slate-900">
 
-    <div id="loginOverlay">
+    <div id="loginOverlay" style="display:none;">
         <div class="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-sm text-center border">
             <h2 class="text-3xl font-black italic text-blue-600 mb-6 uppercase tracking-tighter">EMS4 ACCESS</h2>
             <input type="password" id="accessKey" onkeypress="if(event.key==='Enter') checkAccess()" placeholder="PASSWORD" class="w-full p-4 border-2 rounded-2xl mb-4 text-center font-bold outline-none focus:border-blue-500">
@@ -79,12 +103,12 @@
                     <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Count</label>
                     <input type="number" id="deployCount" oninput="renderDeploys(); checkChanges();" class="w-full p-2 border-2 rounded-lg font-black text-blue-600 text-center">
                 </div>
-                <div class="w-2/3">
+                <div class="w-full">
                     <label class="block text-[10px] font-black text-blue-500 uppercase mb-1 italic text-center">KEYWORD (MOT)</label>
                     <input type="text" id="filterInput" oninput="checkChanges()" class="w-full p-2 border-2 border-blue-500 rounded-lg font-black text-blue-700 bg-blue-50 text-center uppercase">
                 </div>
             </div>
-            <div class="text-center bg-slate-50 p-2 rounded-xl border border-dashed border-slate-300 uppercase italic text-[10px] font-bold text-slate-600">
+            <div class="admin-only text-center bg-slate-50 p-2 rounded-xl border border-dashed border-slate-300 uppercase italic text-[10px] font-bold text-slate-600">
                 <div id="distDisplay">---</div>
             </div>
         </div>
@@ -99,7 +123,8 @@
 
     <script>
         const CONFIG = {
-            adminKey: "admin75", superKey: "super2025",
+            adminKey: "admin75", 
+            superKey: "super2025",
             firebase: { apiKey: "AIzaSyAFR96bibEGLaMroqFZCLcSHyCoAdewz78", authDomain: "ems4-reporting.firebaseapp.com", databaseURL: "https://ems4-reporting-default-rtdb.firebaseio.com", projectId: "ems4-reporting" },
             telegram: { token: '8445418590:AAEzun8AqYrkmFnzMoXaz3UBIQRTQCgQHeI', chatId: '-5224398844' }
         };
@@ -110,14 +135,22 @@
 
         window.onload = async () => {
             const key = localStorage.getItem('ems4_key');
+            const params = new URLSearchParams(window.location.search);
+            
             if(key === CONFIG.adminKey || key === CONFIG.superKey) {
                 userRole = (key === CONFIG.superKey) ? "super" : "admin";
                 if(userRole === 'admin') document.body.classList.add('admin-mode');
                 await initApp();
+                if(params.get('plat')) selectPlatform(params.get('plat'));
+                else selectPlatform('WEB');
+            } else if (params.get('mode') === 'view') {
+                userRole = "viewer"; 
+                document.body.classList.add('viewer-mode');
+                if(params.get('target') === 'true') document.body.classList.add('target-only');
+                await initApp(); 
+                if(params.get('plat')) selectPlatform(params.get('plat'));
             } else {
-                const params = new URLSearchParams(window.location.search);
-                if(params.get('mode') === 'view') { userRole = "viewer"; document.body.classList.add('viewer-mode'); await initApp(); if(params.get('plat')) selectPlatform(params.get('plat')); }
-                else { document.getElementById('loginOverlay').style.display = 'flex'; }
+                document.getElementById('loginOverlay').style.display = 'flex';
             }
         };
 
@@ -131,33 +164,31 @@
                 badge.classList.add('bg-purple-600');
                 document.querySelectorAll('.super-only').forEach(el => el.classList.remove('hidden'));
                 document.querySelectorAll('input[type=number]').forEach(i => i.disabled = false);
-            } else {
-                badge.classList.add(userRole==='admin'?'bg-blue-600':'bg-slate-400');
+            } else if (userRole === 'admin') {
+                badge.classList.add('bg-blue-600');
             }
 
-            if(userRole !== 'super') {
-                document.querySelectorAll('.stat-field').forEach(i => i.classList.add('admin-locked'));
-                document.getElementById('rotDetailText').readOnly = true;
+            if(userRole === 'viewer') {
+                document.getElementById('filterInput').disabled = true;
+                document.getElementById('deployCount').disabled = true;
             }
 
             const confSnap = await db.ref('ems4/config/boites').once('value');
             if(confSnap.exists()) boitesConfig = confSnap.val();
             ['WEB','SELENIUM','AUTOMAT'].forEach(p => document.getElementById('conf-'+p).value = boitesConfig[p]);
-            if(userRole !== 'viewer') selectPlatform('WEB');
         }
 
         async function selectPlatform(p) {
             currentPlatform = p;
             document.getElementById('loadingOverlay').style.display = 'flex';
             document.querySelectorAll('.plat-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('btn-'+p).classList.add('active');
+            const btn = document.getElementById('btn-'+p);
+            if(btn) btn.classList.add('active');
 
             const snap = await db.ref(`ems4/plans/${p}/current`).once('value');
             stateData = snap.val() || { deploys: [], stats: {}, filter: "" };
-            if(!stateData.deploys) stateData.deploys = [];
-            if(!stateData.stats) stateData.stats = {};
             
-            const s = stateData.stats;
+            const s = stateData.stats || {};
             document.getElementById('statSeeds').value = s.seeds || '';
             document.getElementById('statRDPs').value = s.rdps || '';
             document.getElementById('statSessions').value = s.sessions || '';
@@ -169,7 +200,7 @@
             document.getElementById('statEnd').value = s.end || '';
             document.getElementById('rotDetailText').value = s.rotDetails || '';
             document.getElementById('filterInput').value = stateData.filter || "";
-            document.getElementById('deployCount').value = (stateData.deploys.length > 0) ? stateData.deploys.length : 8;
+            document.getElementById('deployCount').value = (stateData.deploys && stateData.deploys.length > 0) ? stateData.deploys.length : 8;
             
             renderDeploys(stateData.deploys);
             checkChanges();
@@ -181,11 +212,12 @@
             const container = document.getElementById('deploysGrid'); container.innerHTML = "";
             const total = boitesConfig[currentPlatform] || 100;
             const base = Math.floor(total / num); const rem = total % num;
-            let dist = [];
+            const isReadonly = (userRole === 'viewer') ? 'disabled' : '';
 
             for (let i = 0; i < num; i++) {
-                const bCount = base + (i < rem ? 1 : 0); dist.push(bCount);
+                const bCount = base + (i < rem ? 1 : 0);
                 const d = (savedDeploys && savedDeploys[i]) ? savedDeploys[i] : { from: '', id: '', batch: '10/3000P', rules: 'SELECT ALL IPS', ips: '' };
+                
                 container.innerHTML += `
                 <div class="deploy-card bg-white p-4 rounded-xl shadow-sm border relative">
                     <div class="flex justify-between items-center mb-3 border-b pb-2">
@@ -193,46 +225,31 @@
                         <span class="text-blue-600 font-bold text-xs underline">${bCount} Boites</span>
                     </div>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
-                        <input type="text" oninput="checkChanges()" class="inp-from p-2 border rounded text-xs font-bold uppercase" value="${d.from || ''}">
-                        <input type="text" oninput="checkChanges()" class="inp-id p-2 border rounded text-xs font-black text-blue-600 bg-blue-50 uppercase" value="${d.id || ''}">
-                        <select onchange="checkChanges()" class="inp-batch p-2 border rounded text-[10px] font-bold uppercase">
+                        <input type="text" ${isReadonly} oninput="checkChanges()" class="inp-from p-2 border rounded text-xs font-bold uppercase" value="${d.from || ''}">
+                        <input type="text" ${isReadonly} oninput="checkChanges()" class="inp-id p-2 border rounded text-xs font-black bg-blue-50 uppercase" value="${d.id || ''}">
+                        <select ${isReadonly} onchange="checkChanges()" class="inp-batch p-2 border rounded text-[10px] font-bold uppercase">
                             ${['0/0 Parallel','3/3000P','5/3000P','10/3000P','20/3000P','30/3000P'].map(o => `<option value="${o}" ${d.batch===o?'selected':''}>${o}</option>`).join('')}
                         </select>
-                        <select onchange="checkChanges()" class="inp-rules p-2 border rounded text-[10px] font-bold uppercase">
+                        <select ${isReadonly} onchange="checkChanges()" class="inp-rules p-2 border rounded text-[10px] font-bold uppercase">
                             ${['SELECT ALL IPS','SELECT 30 IPS MAX','RANDOM ON SELECTED','RANDOM ON SERVER SELECTED'].map(o => `<option value="${o}" ${d.rules===o?'selected':''}>${o}</option>`).join('')}
                         </select>
                     </div>
-                    <textarea oninput="checkChanges()" class="inp-ips w-full p-2 border rounded text-[10px] font-mono bg-slate-50 uppercase" rows="${userRole==='viewer'?4:1}">${d.ips || ''}</textarea>
+                    <textarea ${isReadonly} oninput="checkChanges()" class="inp-ips w-full p-2 border rounded text-[10px] font-mono bg-slate-50 uppercase" rows="${userRole==='viewer'?4:1}">${d.ips || ''}</textarea>
                 </div>`;
             }
-            document.getElementById('distDisplay').innerText = dist.join(' | ');
+            document.getElementById('distDisplay').innerText = Array.from({length: num}, (_, i) => base + (i < rem ? 1 : 0)).join(' | ');
         }
 
         function checkChanges() {
             if(userRole === 'viewer') return;
             let changed = false;
             if(document.getElementById('filterInput').value !== (stateData.filter || "")) changed = true;
-            if(parseInt(document.getElementById('deployCount').value) !== (stateData.deploys.length)) changed = true;
-
+            if(parseInt(document.getElementById('deployCount').value) !== (stateData.deploys?.length || 0)) changed = true;
+            
             const s = stateData.stats || {};
-            const currentStats = {
-                seeds: document.getElementById('statSeeds').value, rdps: document.getElementById('statRDPs').value,
-                paused: document.getElementById('statPaused').value, rotDetails: document.getElementById('rotDetailText').value
-            };
-            if(currentStats.seeds !== (s.seeds || "") || currentStats.rdps !== (s.rdps || "") || currentStats.paused !== (s.paused || "") || currentStats.rotDetails !== (s.rotDetails || "")) changed = true;
+            if(document.getElementById('statSeeds').value !== (s.seeds || "")) changed = true;
+            if(document.getElementById('statPaused').value !== (s.paused || "")) changed = true;
 
-            if(!changed) {
-                const cards = document.querySelectorAll('.deploy-card');
-                for(let i=0; i<cards.length; i++) {
-                    const o = stateData.deploys[i] || {};
-                    const cur = { 
-                        from: cards[i].querySelector('.inp-from').value, id: cards[i].querySelector('.inp-id').value, 
-                        batch: cards[i].querySelector('.inp-batch').value, rules: cards[i].querySelector('.inp-rules').value, 
-                        ips: cards[i].querySelector('.inp-ips').value 
-                    };
-                    if(cur.id !== (o.id || "") || cur.from !== (o.from || "") || cur.batch !== (o.batch || "") || cur.rules !== (o.rules || "") || cur.ips !== (o.ips || "")) { changed = true; break; }
-                }
-            }
             document.getElementById('saveBtn').disabled = !changed;
         }
 
@@ -257,53 +274,21 @@
             if(filter !== (stateData.filter || "")) logChanges.push(`🔍 Keyword: ${filter || 'NONE'}`);
             if(stats.paused !== (stateData.stats?.paused || "")) logChanges.push(`⏸ Paused: ${stats.paused}`);
 
-            deploys.forEach((d, i) => {
-                const o = stateData.deploys[i] || {};
-                let diffs = [];
-                if(d.id !== (o.id || "")) diffs.push("ID");
-                if(d.from !== (o.from || "")) diffs.push("FROM");
-                if(d.batch !== (o.batch || "")) diffs.push("BATCH");
-                if(d.rules !== (o.rules || "")) diffs.push("RULES");
-                if(d.ips !== (o.ips || "")) diffs.push("IPs");
-                if(diffs.length > 0) logChanges.push(`📍 D${i+1} (${d.id || 'Empty'}): ${diffs.join(', ')} updated`);
-            });
-
             await db.ref(`ems4/plans/${currentPlatform}/current`).set({ deploys, filter, stats, updatedAt: new Date().toLocaleString() });
 
+            if(logChanges.length > 0) {
+                const publicUrl = "https://emsw1.github.io/ems4-plan";
+                const viewLink = `${publicUrl}/?mode=view&plat=${currentPlatform}&target=true`;
+                let changesText = ""; logChanges.forEach(l => { changesText += "• " + l + "\n"; });
 
+                const telegramMsg = `🚀 <b>UPDATE: #${currentPlatform}</b>\n━━━━━━━━━━━━━━━\n📝 <b>CHANGES:</b>\n${changesText}━━━━━━━━━━━━━━━\n🔗 <b>VIEW PLAN:</b>\n${viewLink}`;
 
-
-if(logChanges.length > 0) {
-                // Hna fin kantsst3mlo dik netlifyBase dialk (Github Pages)
-                const publicUrl = "https://emsw1.github.io/ems4-plan"; // Hadu hya netlifyBase
-                const viewLink = `${publicUrl}/?mode=view&plat=${currentPlatform}`;
-                
-                let changesText = ""; 
-                logChanges.forEach(l => { changesText += "• " + l + "\n"; });
-
-                const telegramMsg = `🚀 <b>UPDATE: #${currentPlatform}</b>\n` +
-                                    `━━━━━━━━━━━━━━━\n` +
-                                    `📝 <b>CHANGES:</b>\n` +
-                                    `${changesText}` +
-                                    `━━━━━━━━━━━━━━━\n` +
-                                    `🔗 <b>VIEW PLAN:</b>\n` +
-                                    `${viewLink}`; 
-
-                try {
-                    await fetch(`https://api.telegram.org/bot${CONFIG.telegram.token}/sendMessage`, {
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            chat_id: CONFIG.telegram.chatId, 
-                            text: telegramMsg, 
-                            parse_mode: 'HTML', 
-                            disable_web_page_preview: false 
-                        })
-                    });
-                } catch (e) { console.error("Telegram Error:", e); }
+                await fetch(`https://api.telegram.org/bot${CONFIG.telegram.token}/sendMessage`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: CONFIG.telegram.chatId, text: telegramMsg, parse_mode: 'HTML', disable_web_page_preview: false })
+                });
             }
-
-            setTimeout(() => { location.reload(); }, 500);
+            location.reload();
         }
 
         async function superQuickSave() {
@@ -330,7 +315,6 @@ if(logChanges.length > 0) {
             boitesConfig[plat] = parseInt(val) || 0;
             await db.ref('ems4/config/boites').set(boitesConfig);
             renderDeploys(stateData.deploys);
-            checkChanges();
         }
 
         function openRot() { document.getElementById('rotDetailPanel').style.display = 'block'; }
