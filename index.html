@@ -136,18 +136,44 @@
         let userRole = "viewer"; let currentPlatform = ""; let stateData = { deploys: [], stats: {}, filter: "" };
         let boitesConfig = { WEB: 100, SELENIUM: 75, AUTOMAT: 20 };
 
-        window.onload = async () => {
-            const key = localStorage.getItem('ems4_key');
-            if(key === CONFIG.adminKey || key === CONFIG.superKey) {
-                userRole = (key === CONFIG.superKey) ? "super" : "admin";
-                if(userRole === 'admin') document.body.classList.add('admin-mode');
-                await initApp();
-            } else {
-                const params = new URLSearchParams(window.location.search);
-                if(params.get('mode') === 'view') { userRole = "viewer"; document.body.classList.add('viewer-mode'); await initApp(); if(params.get('plat')) selectPlatform(params.get('plat')); }
-                else { document.getElementById('loginOverlay').style.display = 'flex'; }
-            }
-        };
+
+window.onload = async () => {
+    const params = new URLSearchParams(window.location.search);
+    const key = localStorage.getItem('ems4_key');
+    const isViewMode = params.get('mode') === 'view';
+
+    // 1. ILA KAN L-LINK FIH mode=view (SABEQ HAD L-CONDITION HIA L-LOWLA)
+    if (isViewMode) {
+        userRole = "viewer";
+        document.body.classList.add('viewer-mode');
+        
+        // Ila kant target=true, khbi l-platforms l-khrin
+        if(params.get('target') === 'true') {
+            document.body.classList.add('target-only');
+        }
+        
+        await initApp();
+        
+        // Khoud l-platforme mn l-URL, ila makantch dir WEB
+        const urlPlat = params.get('plat') || 'WEB';
+        selectPlatform(urlPlat);
+        
+        // STOP: Mat-douzch l-login logic ga3
+        return; 
+    }
+
+    // 2. ILA MAKANCH mode=view, CHOF WACH KAYN LOGIN DEJA
+    if(key === CONFIG.adminKey || key === CONFIG.superKey) {
+        userRole = (key === CONFIG.superKey) ? "super" : "admin";
+        document.body.classList.add(userRole + '-mode');
+        await initApp();
+        selectPlatform('WEB');
+    } else {
+        // 3. ILA MAKAYN LA mode=view LA login, TLEB L-PASSWORD
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('appContent').classList.add('hidden');
+    }
+};
 
         async function initApp() {
             document.getElementById('loginOverlay').style.display = 'none';
