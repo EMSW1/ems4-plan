@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EMS4 | Smart Cloud Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -9,13 +10,26 @@
     <style>
         .deploy-card { transition: all 0.2s ease; border-left: 5px solid #e2e8f0; }
         .plat-btn.active { border-color: #2563eb; background-color: #eff6ff; color: #2563eb; ring: 4px; ring-color: #eff6ff; }
-        #loadingOverlay { display:none; background: rgba(255,255,255,0.8); position: fixed; inset: 0; z-index: 150; align-items: center; justify-content: center; }
+        #loadingOverlay, #loginOverlay { background: rgba(255,255,255,0.95); position: fixed; inset: 0; z-index: 200; align-items: center; justify-content: center; display: flex; }
+        #loadingOverlay { display: none; z-index: 210; }
         .history-item { transition: all 0.2s; border-left: 4px solid transparent; }
         .history-item:hover { border-left-color: #2563eb; background-color: #f8fafc; }
-        button:disabled { background-color: #cbd5e1 !important; border-color: #94a3b8 !important; cursor: not-allowed; transform: none !important; opacity: 0.7; }
+        .viewer-mode .admin-only, .viewer-mode .super-only, .viewer-mode .platform-selector, .viewer-mode #roleLabel, .viewer-mode #roleBadge { display: none !important; }
+        .admin-mode .super-only { display: none !important; }
+        #saveBtn:disabled, #updateStatsBtn:disabled { background-color: #cbd5e1; cursor: not-allowed; opacity: 0.7; }
+        .readonly-stat { pointer-events: none !important; background-color: #f1f5f9 !important; border-color: #e2e8f0 !important; }
+        .rot-label { background: #eff6ff; border: 1px solid #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800; text-align: center; }
     </style>
 </head>
 <body class="bg-slate-100 p-4 md:p-8 font-sans text-slate-900">
+
+    <div id="loginOverlay" style="display: none;">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl border border-slate-200 w-full max-w-sm text-center">
+            <h2 class="text-2xl font-black italic mb-6 text-blue-600 tracking-tighter uppercase font-black">Access Control</h2>
+            <input type="password" id="accessKey" placeholder="Enter Key..." class="w-full p-4 border-2 rounded-2xl mb-4 text-center font-bold outline-none">
+            <button onclick="checkAccess()" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black uppercase">Login</button>
+        </div>
+    </div>
     
     <div id="loadingOverlay">
         <div class="flex flex-col items-center">
@@ -24,188 +38,164 @@
         </div>
     </div>
 
-    <div class="max-w-5xl mx-auto">
-        <header class="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-blue-600 mb-6 flex justify-between items-center text-slate-800">
+    <div id="appContent" class="hidden max-w-6xl mx-auto">
+        <header class="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-blue-600 mb-4 flex justify-between items-center">
             <h1 class="text-2xl font-black italic uppercase tracking-tighter">EMS4 PLAN</h1>
-            <div class="text-right flex flex-col items-end">
-                <span id="cloudStatus" class="text-green-500 font-bold text-[10px] uppercase tracking-widest animate-pulse">● System Live</span>
-                <span id="activePlatDisplay" class="text-slate-400 font-black text-[9px] uppercase tracking-tighter italic mt-1">Ready</span>
+            <div class="flex gap-4 items-center">
+                <div class="text-right">
+                    <div id="roleLabel" class="text-[9px] font-black text-slate-400 uppercase mb-1">---</div>
+                    <span id="roleBadge" class="text-white px-2 py-0.5 rounded text-[8px] font-black uppercase">---</span>
+                </div>
+                <button onclick="logout()" class="admin-only text-[10px] text-red-500 font-bold underline">Logout</button>
             </div>
         </header>
 
-        <div class="grid grid-cols-3 gap-4 mb-6">
-            <button onclick="selectPlatform('WEB', 100)" id="btn-WEB" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black transition-all text-slate-600 uppercase italic">Web (100)</button>
-            <button onclick="selectPlatform('SELENIUM', 75)" id="btn-SELENIUM" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black transition-all text-slate-600 uppercase italic">Selenium (75)</button>
-            <button onclick="selectPlatform('AUTOMAT', 20)" id="btn-AUTOMAT" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black transition-all text-slate-600 uppercase italic">Automat (20)</button>
+        <div class="platform-selector grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <button onclick="selectPlatform('WEB')" id="btn-WEB" class="plat-btn bg-white p-5 rounded-2xl shadow-sm border-2 font-black text-slate-600 uppercase italic">Web <br> <span class="text-[10px] text-blue-500 not-italic" id="label-WEB">Total: 100</span></button>
+            <button onclick="selectPlatform('SELENIUM')" id="btn-SELENIUM" class="plat-btn bg-white p-5 rounded-2xl shadow-sm border-2 font-black text-slate-600 uppercase italic">Selenium <br> <span class="text-[10px] text-blue-500 not-italic" id="label-SELENIUM">Total: 75</span></button>
+            <button onclick="selectPlatform('AUTOMAT')" id="btn-AUTOMAT" class="plat-btn bg-white p-5 rounded-2xl shadow-sm border-2 font-black text-slate-600 uppercase italic">Automat <br> <span class="text-[10px] text-blue-500 not-italic" id="label-AUTOMAT">Total: 20</span></button>
         </div>
 
-        <div id="mainSection" class="hidden space-y-6">
+        <div id="platformContent" class="hidden space-y-6">
+            <div id="statsSection" class="w-full">
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                    <div class="bg-blue-50 p-3 rounded-2xl border border-blue-200"><label class="block text-[9px] font-black text-blue-500 uppercase">Seeds</label><input type="text" id="statTotalSeeds" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-blue-700 outline-none" value="0"></div>
+                    <div class="bg-blue-50 p-3 rounded-2xl border border-blue-200"><label class="block text-[9px] font-black text-blue-500 uppercase">RDPs</label><input type="text" id="statRDPs" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-blue-700 outline-none" value="0"></div>
+                    <div class="bg-blue-50 p-3 rounded-2xl border border-blue-200"><label class="block text-[9px] font-black text-blue-500 uppercase">Sessions</label><input type="text" id="statSessions" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-blue-700 outline-none" value="0"></div>
+                    <div class="bg-blue-50 p-3 rounded-2xl border border-blue-200 text-center relative">
+                        <label class="block text-[9px] font-black text-blue-500 uppercase">Rotation</label>
+                        <div class="flex justify-center items-center gap-1 font-black text-blue-700"><input type="number" id="rotMin" oninput="checkStatsChange()" class="stat-input w-8 bg-transparent text-center" value="0"><span>-</span><input type="number" id="rotMax" oninput="checkStatsChange()" class="stat-input w-8 bg-transparent text-center" value="0"></div>
+                        <button onclick="toggleRotation()" class="mt-1 text-[8px] bg-blue-600 text-white px-2 py-0.5 rounded font-black uppercase">Detail</button>
+                    </div>
+                    <div class="bg-emerald-50 p-3 rounded-2xl border border-emerald-100 text-center"><label class="text-[9px] font-black text-emerald-500 uppercase">Quality</label><input type="text" id="statQualityVal" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-emerald-700 text-center outline-none" value="0"></div>
+                    <div class="bg-rose-50 p-3 rounded-2xl border border-rose-100 text-center"><label class="text-[9px] font-black text-rose-500 uppercase">Paused</label><input type="text" id="statPausedVal" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-rose-700 text-center outline-none" value="0"></div>
+                    <div class="bg-orange-50 p-3 rounded-2xl border border-orange-100 text-center">
+                        <label class="block text-[9px] font-black text-orange-500 uppercase italic">Period</label>
+                        <div class="flex gap-1 justify-center"><input type="text" id="statDateStart" oninput="checkStatsChange()" class="stat-input w-12 bg-transparent text-[9px] font-bold text-orange-700 text-center outline-none" placeholder="Start"><span class="text-orange-300">-</span><input type="text" id="statDateEnd" oninput="checkStatsChange()" class="stat-input w-12 bg-transparent text-[9px] font-bold text-orange-700 text-center outline-none" placeholder="End"></div>
+                    </div>
+                </div>
+                
+                <div id="rotationBox" class="hidden mt-3 p-4 bg-white rounded-xl border-2 border-blue-100 shadow-lg">
+                    <div class="super-only">
+                        <label class="block text-[10px] font-black text-blue-500 uppercase mb-2 italic">Edit Rotation</label>
+                        <textarea id="rotationRawData" oninput="checkStatsChange(); renderRotationLabels(this.value);" class="w-full p-3 border rounded text-xs font-mono bg-slate-50 outline-none" rows="5"></textarea>
+                    </div>
+                    <div class="mt-2">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 italic">Rotation View</label>
+                        <div id="rotationLabelsGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"></div>
+                    </div>
+                </div>
+                <button id="updateStatsBtn" onclick="saveStatsOnly()" class="super-only mt-2 w-full bg-slate-800 text-white py-2 rounded-xl text-[10px] font-black uppercase">Update Stats Only</button>
+            </div>
+
             <div class="bg-white p-6 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6 border border-slate-200">
-                <div>
+                <div class="admin-only">
                     <label class="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">Deploys Count</label>
-                    <input type="number" id="deployCount" oninput="checkIfChanged(); generateDeploys();" class="w-full p-2 border-2 rounded-lg font-black text-blue-600 text-lg text-center bg-white">
+                    <input type="number" id="deployCount" oninput="generateDeploys(); checkIfChanged();" class="w-full p-2 border-2 rounded-lg font-black text-blue-600 text-lg text-center">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-black text-blue-500 mb-1 uppercase italic">🔑 Filter (Code Mot)</label>
-                    <input type="text" id="filterKeyword" oninput="checkIfChanged()" class="w-full p-2 border-2 border-blue-100 rounded-lg font-bold text-blue-700 bg-blue-50 focus:bg-white outline-none">
+                    <label class="block text-[10px] font-black text-blue-500 mb-1 uppercase italic">🔑 Filter (ID/Code Mot)</label>
+                    <input type="text" id="filterKeyword" oninput="applyFilter(this.value); checkIfChanged();" class="w-full p-2 border-2 border-blue-100 rounded-lg font-bold text-blue-700 bg-blue-50 text-center uppercase">
                 </div>
                 <div class="p-3 bg-slate-50 rounded-xl text-center flex flex-col justify-center">
-                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Distribution</span>
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Distribution</span>
                     <div id="distOutput" class="text-[11px] font-black text-blue-700 mt-1"></div>
                 </div>
             </div>
 
             <div id="deploysContainer" class="space-y-4"></div>
 
-            <div class="sticky bottom-4 z-10 shadow-2xl">
-                <button id="saveBtn" disabled onclick="processSave()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-black text-xl transition active:scale-95 border-b-4 border-blue-800 uppercase italic">
-                    Save Changes & Notify Group
-                </button>
+            <div class="admin-only sticky bottom-4 z-10 shadow-2xl">
+                <button id="saveBtn" disabled onclick="processSave()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-black text-xl border-b-4 border-blue-800 uppercase italic">Save Changes & Notify Group</button>
             </div>
 
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 mt-10 overflow-hidden mb-20">
                 <div class="bg-slate-900 p-4 flex justify-between items-center">
                     <h2 class="text-white font-black italic text-sm uppercase tracking-widest flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        Last Updates Summary
+                        Last Updates History
                     </h2>
                 </div>
-                <div id="historyList" class="divide-y divide-slate-100 max-h-[500px] overflow-y-auto bg-white"></div>
+                <div id="historyList" class="divide-y divide-slate-100 max-h-[400px] overflow-y-auto bg-white"></div>
             </div>
         </div>
     </div>
 
     <script>
-        const firebaseConfig = {
-          apiKey: "AIzaSyAFR96bibEGLaMroqFZCLcSHyCoAdewz78",
-          authDomain: "ems4-reporting.firebaseapp.com",
-          databaseURL: "https://ems4-reporting-default-rtdb.firebaseio.com",
-          projectId: "ems4-reporting",
-          storageBucket: "ems4-reporting.firebasestorage.app",
-          messagingSenderId: "290747078412",
-          appId: "1:290747078412:web:f1ddc2273dc07cc6e55b29"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+        const ADMIN_KEY = "admin75"; const SUPER_KEY = "super2025";
+        const firebaseConfig = { apiKey: "AIzaSyAFR96bibEGLaMroqFZCLcSHyCoAdewz78", authDomain: "ems4-reporting.firebaseapp.com", databaseURL: "https://ems4-reporting-default-rtdb.firebaseio.com", projectId: "ems4-reporting" };
+        firebase.initializeApp(firebaseConfig); const db = firebase.database();
         const telegramToken = '8445418590:AAEzun8AqYrkmFnzMoXaz3UBIQRTQCgQHeI'; 
-        const telegramChatId = '-5224398844'; 
-        const currentUrl = "https://emsw1.github.io/ems4-plan"; 
+        const telegramChatId = '-5224398844';
+        const githubBase = "https://emsw1.github.io/ems4-plan";
 
-        let currentPlatform = "";
-        let boitesTotal = 0;
-        let oldCloudData = null;
+        let userRole = "viewer"; let currentPlatform = ""; let oldCloudData = null;
+        let boitesConfig = { WEB: 100, SELENIUM: 75, AUTOMAT: 20 };
 
-        function checkIfChanged() {
-            if (!oldCloudData) return;
-            const currentFilter = document.getElementById('filterKeyword').value.trim();
-            const currentDeploysNum = parseInt(document.getElementById('deployCount').value);
-            const cards = document.querySelectorAll('.deploy-card');
-            let hasChanges = false;
-
-            if (currentFilter !== (oldCloudData.filter || "") || currentDeploysNum !== (oldCloudData.deploys ? oldCloudData.deploys.length : 0)) {
-                hasChanges = true;
-            }
-
-            cards.forEach((c, idx) => {
-                if (hasChanges) return;
-                const old = (oldCloudData.deploys && oldCloudData.deploys[idx]) ? oldCloudData.deploys[idx] : null;
-                if (!old) { hasChanges = true; return; }
-                const dFrom = c.querySelector('.from-val').value.trim();
-                const dId = c.querySelector('.id-val').value.trim();
-                const dBatch = c.querySelector('.batch-val').value;
-                const dRules = c.querySelector('.rules-val').value;
-                const dIps = c.querySelector('.ips-val').value.trim();
-
-                if (dFrom !== old.from || dId !== old.id || dBatch !== old.batch || dRules !== old.rules || dIps !== old.ips) {
-                    hasChanges = true;
-                }
-            });
-            document.getElementById('saveBtn').disabled = !hasChanges;
-        }
-
-        window.onload = function() {
+        window.onload = async function() {
+            const savedKey = localStorage.getItem('ems4_key');
             const urlParams = new URLSearchParams(window.location.search);
-            const plat = urlParams.get('plat');
-            if (plat) {
-                const count = plat === 'WEB' ? 100 : (plat === 'SELENIUM' ? 75 : 20);
-                selectPlatform(plat, count);
-            }
+            if (urlParams.get('mode') === 'view' || urlParams.get('plat')) {
+                userRole = "viewer"; document.body.classList.add('viewer-mode');
+                if(urlParams.get('plat')) selectPlatform(urlParams.get('plat'));
+                document.getElementById('appContent').classList.remove('hidden');
+            } else if (savedKey === SUPER_KEY || savedKey === ADMIN_KEY) {
+                userRole = (savedKey === SUPER_KEY) ? "super" : "admin";
+                if(userRole === 'admin') document.body.classList.add('admin-mode');
+                startApp();
+            } else { document.getElementById('loginOverlay').style.display = 'flex'; }
         };
 
-        async function selectPlatform(p, count) {
-            currentPlatform = p;
-            boitesTotal = count;
-            document.getElementById('loadingOverlay').style.display = 'flex';
-            document.getElementById('activePlatDisplay').innerText = "PLATFORM: " + p;
-            document.querySelectorAll('.plat-btn').forEach(b => b.classList.remove('active', 'border-blue-600', 'text-blue-600'));
-            const activeBtn = document.getElementById('btn-'+p);
-            if(activeBtn) activeBtn.classList.add('active', 'border-blue-600', 'text-blue-600');
-            document.getElementById('mainSection').classList.remove('hidden');
-
-            db.ref('ems4/plans/' + currentPlatform + '/current').once('value', (snapshot) => {
-                oldCloudData = snapshot.val();
-                if (oldCloudData) {
-                    document.getElementById('deployCount').value = oldCloudData.deploys.length;
-                    document.getElementById('filterKeyword').value = oldCloudData.filter || "";
-                    generateDeploys(oldCloudData.deploys);
-                } else {
-                    document.getElementById('deployCount').value = 8;
-                    generateDeploys();
-                }
-                document.getElementById('saveBtn').disabled = true;
-                document.getElementById('loadingOverlay').style.display = 'none';
-            });
-            loadHistory();
-        }
-
-        function loadHistory() {
-            db.ref('ems4/plans/' + currentPlatform + '/history').limitToLast(10).on('value', (snapshot) => {
-                const list = document.getElementById('historyList');
-                list.innerHTML = "";
-                const data = snapshot.val();
-                if (!data) return;
-                Object.keys(data).reverse().forEach(key => {
-                    const item = data[key];
-                    // Formatting multi-line summary for UI display
-                    const displaySummary = item.summary ? item.summary.replace(/\n/g, '<br>') : 'Updated';
-                    
-                    list.innerHTML += `
-                        <div class="history-item p-4 flex justify-between items-start border-l-4 border-transparent">
-                            <div class="flex flex-col gap-1 overflow-hidden">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[10px] font-black bg-slate-100 px-2 py-0.5 rounded text-slate-800 uppercase italic">${item.filter}</span>
-                                    <span class="text-[9px] text-slate-400 font-bold tracking-tight">${item.timestamp}</span>
-                                </div>
-                                <div class="text-[10px] text-red-600 font-bold tracking-tight uppercase leading-relaxed mt-1">
-                                    ${displaySummary}
-                                </div>
-                            </div>
-                            <button onclick="loadHistoryToUI('${key}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-2 rounded-lg text-[9px] font-black transition shrink-0 ml-4">LOAD</button>
-                        </div>`;
-                });
-            });
-        }
-
-        async function loadHistoryToUI(key) {
-            document.getElementById('loadingOverlay').style.display = 'flex';
-            const snapshot = await db.ref('ems4/plans/' + currentPlatform + '/history/' + key).once('value');
-            const data = snapshot.val();
-            if (data) {
-                document.getElementById('deployCount').value = data.deploys.length;
-                document.getElementById('filterKeyword').value = data.filter;
-                generateDeploys(data.deploys);
-                document.getElementById('saveBtn').disabled = true;
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+        function startApp() {
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('appContent').classList.remove('hidden');
+            document.getElementById('roleBadge').innerText = userRole.toUpperCase();
+            document.getElementById('roleLabel').innerText = `ROLE: ${userRole.toUpperCase()}`;
+            if(userRole === 'admin') {
+                document.querySelectorAll('.stat-input').forEach(el => { el.readOnly = true; el.classList.add('readonly-stat'); });
             }
+        }
+
+        async function selectPlatform(p) {
+            currentPlatform = p;
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.querySelectorAll('.plat-btn').forEach(b => b.classList.remove('active', 'border-blue-600', 'text-blue-600'));
+            if(document.getElementById('btn-'+p)) document.getElementById('btn-'+p).classList.add('active', 'border-blue-600', 'text-blue-600');
+            document.getElementById('platformContent').classList.remove('hidden'); 
+
+            const snap = await db.ref(`ems4/plans/${p}/current`).once('value');
+            oldCloudData = snap.val() || { deploys: [], stats: {}, filter: "" };
+            
+            // Render Stats
+            const s = oldCloudData.stats || {};
+            document.getElementById('statTotalSeeds').value = s.seeds || '0';
+            document.getElementById('statRDPs').value = s.rdps || '0';
+            document.getElementById('statSessions').value = s.sessions || '0';
+            document.getElementById('rotMin').value = s.rotMin || 0;
+            document.getElementById('rotMax').value = s.rotMax || 0;
+            document.getElementById('statQualityVal').value = s.qualityVal || '0';
+            document.getElementById('statPausedVal').value = s.pausedVal || '0';
+            document.getElementById('statDateStart').value = s.dateStart || '';
+            document.getElementById('statDateEnd').value = s.dateEnd || '';
+            document.getElementById('rotationRawData').value = s.rotationRaw || "";
+            renderRotationLabels(s.rotationRaw || "");
+            
+            // Render Controls
+            document.getElementById('filterKeyword').value = oldCloudData.filter || "";
+            document.getElementById('deployCount').value = oldCloudData.deploys ? oldCloudData.deploys.length : 8;
+            
+            generateDeploys(oldCloudData.deploys);
+            applyFilter(document.getElementById('filterKeyword').value);
+            loadHistory();
             document.getElementById('loadingOverlay').style.display = 'none';
         }
 
         function generateDeploys(savedData = null) {
             const num = parseInt(document.getElementById('deployCount').value) || 0;
-            const container = document.getElementById('deploysContainer');
-            container.innerHTML = "";
-            const base = Math.floor(boitesTotal / num);
-            const remainder = boitesTotal % num;
+            const container = document.getElementById('deploysContainer'); container.innerHTML = "";
+            const totalB = boitesConfig[currentPlatform] || 100;
+            const base = Math.floor(totalB / num);
+            const remainder = totalB % num;
             let distArray = [];
 
             for (let i = 0; i < num; i++) {
@@ -213,104 +203,144 @@
                 distArray.push(bCount);
                 const d = (savedData && savedData[i]) ? savedData[i] : { from: '', id: '', batch: '10/3000P', rules: 'SELECT ALL IPS', ips: '' };
                 container.innerHTML += `
-                    <div class="deploy-card bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <div class="flex justify-between items-center mb-4 border-b pb-2 text-[10px] font-black">
-                            <span class="bg-slate-800 text-white px-3 py-1 rounded-full uppercase italic">DEPLOY ${i+1}</span>
-                            <span class="text-blue-600 underline">${bCount} BOITES</span>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-                            <input type="text" oninput="checkIfChanged()" class="from-val p-2 border rounded text-xs font-bold uppercase focus:ring-1 focus:ring-blue-500" value="${d.from}" placeholder="FROM">
-                            <input type="text" oninput="checkIfChanged()" class="id-val p-2 border rounded text-xs font-black text-blue-600 uppercase focus:ring-1 focus:ring-blue-500" value="${d.id}" placeholder="ID">
-                            <select onchange="checkIfChanged()" class="batch-val p-2 border rounded text-xs font-bold uppercase">
-                                <option ${d.batch == '10/3000P' ? 'selected' : ''}>10/3000P</option>
-                                <option ${d.batch == '5/3000P' ? 'selected' : ''}>5/3000P</option>
-                                <option ${d.batch == '3/3000P' ? 'selected' : ''}>3/3000P</option>
-                                <option ${d.batch == '0/0 Parallel' ? 'selected' : ''}>0/0 Parallel</option>
-                            </select>
-                            <select onchange="checkIfChanged()" class="rules-val p-2 border rounded text-xs font-bold uppercase">
-                                <option ${d.rules == 'SELECT ALL IPS' ? 'selected' : ''}>SELECT ALL IPS</option>
-                                <option ${d.rules == 'SELECT 30 IPS MAX' ? 'selected' : ''}>SELECT 30 IPS MAX</option>
-                                <option ${d.rules == 'RANDOM ON SELECTED' ? 'selected' : ''}>RANDOM ON SELECTED</option>
-                                <option ${d.rules == 'RANDOM ON SERVER SELECTED' ? 'selected' : ''}>RANDOM ON SERVER SELECTED</option>
-                                <option ${d.rules == '2 ips RANDOM ON SERVER SELECTED' ? 'selected' : ''}>2 ips RANDOM ON SERVER SELECTED</option>
-                            </select>
-                        </div>
-                        <textarea oninput="checkIfChanged()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50 uppercase focus:bg-white" rows="2" placeholder="IP LIST">${d.ips}</textarea>
-                    </div>`;
+                <div class="deploy-card bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-4 border-b pb-2 text-[10px] font-black">
+                        <span class="bg-slate-800 text-white px-3 py-1 rounded-full uppercase italic">DEPLOY ${i+1}</span>
+                        <span class="text-blue-600 underline">${bCount} BOITES</span>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                        <input type="text" oninput="checkIfChanged()" class="from-val p-2 border rounded text-xs font-bold uppercase" value="${d.from}" placeholder="FROM">
+                        <input type="text" oninput="checkIfChanged()" class="id-val p-2 border rounded text-xs font-black text-blue-600 uppercase" value="${d.id}" placeholder="ID">
+                        <select onchange="checkIfChanged()" class="batch-val p-2 border rounded text-xs uppercase font-bold">
+                            <option value="0/0 Parallel" ${d.batch=='0/0 Parallel'?'selected':''}>0/0 Parallel</option>
+                            <option value="3/3000P" ${d.batch=='3/3000P'?'selected':''}>3/3000P</option>
+                            <option value="5/3000P" ${d.batch=='5/3000P'?'selected':''}>5/3000P</option>
+                            <option value="10/3000P" ${d.batch=='10/3000P'?'selected':''}>10/3000P</option>
+                            <option value="20/3000P" ${d.batch=='20/3000P'?'selected':''}>20/3000P</option>
+                            <option value="30/3000P" ${d.batch=='30/3000P'?'selected':''}>30/3000P</option>
+                        </select>
+                        <select onchange="checkIfChanged()" class="rules-val p-2 border rounded text-xs uppercase font-bold">
+                            <option value="SELECT ALL IPS" ${d.rules=='SELECT ALL IPS'?'selected':''}>SELECT ALL IPS</option>
+                            <option value="SELECT 30 IPS MAX" ${d.rules=='SELECT 30 IPS MAX'?'selected':''}>SELECT 30 IPS MAX</option>
+                            <option value="RANDOM ON SELECTED" ${d.rules=='RANDOM ON SELECTED'?'selected':''}>RANDOM ON SELECTED</option>
+                            <option value="RANDOM ON SERVER SELECTED" ${d.rules=='RANDOM ON SERVER SELECTED'?'selected':''}>RANDOM ON SERVER SELECTED</option>
+                            <option value="2 ips RANDOM ON SERVER SELECTED" ${d.rules=='2 ips RANDOM ON SERVER SELECTED'?'selected':''}>2 ips RANDOM ON SERVER SELECTED</option>
+                        </select>
+                    </div>
+                    <textarea oninput="checkIfChanged()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50 uppercase" rows="${userRole==='viewer'?3:1}">${d.ips || ''}</textarea>
+                </div>`;
             }
             document.getElementById('distOutput').innerText = distArray.join(' | ');
         }
 
-        async function processSave() {
-            const currentFilter = document.getElementById('filterKeyword').value.trim();
+        function applyFilter(f) {
             const cards = document.querySelectorAll('.deploy-card');
-            let newData = [];
-            let changesArray = [];
+            cards.forEach(card => {
+                const idVal = card.querySelector('.id-val').value.toUpperCase();
+                card.style.display = (!f || idVal.includes(f.toUpperCase())) ? 'block' : 'none';
+            });
+        }
 
-            cards.forEach((c, idx) => {
-                const d = {
-                    from: c.querySelector('.from-val').value.trim(),
-                    id: c.querySelector('.id-val').value.trim(),
-                    batch: c.querySelector('.batch-val').value,
-                    rules: c.querySelector('.rules-val').value,
-                    ips: c.querySelector('.ips-val').value.trim()
-                };
-                newData.push(d);
+        function checkIfChanged() {
+            if (userRole === 'viewer') return;
+            const cards = document.querySelectorAll('.deploy-card');
+            let hasChanges = false;
+            const currentFilter = document.getElementById('filterKeyword').value;
+            
+            if (currentFilter !== oldCloudData.filter || cards.length !== (oldCloudData.deploys?.length || 0)) {
+                hasChanges = true;
+            } else {
+                cards.forEach((c, i) => {
+                    const old = oldCloudData.deploys[i] || {};
+                    if (c.querySelector('.from-val').value !== old.from || c.querySelector('.id-val').value !== old.id || 
+                        c.querySelector('.batch-val').value !== old.batch || c.querySelector('.rules-val').value !== old.rules || 
+                        c.querySelector('.ips-val').value !== old.ips) hasChanges = true;
+                });
+            }
+            document.getElementById('saveBtn').disabled = !hasChanges;
+        }
 
-                if (oldCloudData && oldCloudData.deploys && oldCloudData.deploys[idx]) {
-                    const old = oldCloudData.deploys[idx];
-                    let diffs = [];
-                    if (d.from !== old.from) diffs.push("From");
-                    if (d.id !== old.id) diffs.push("ID");
-                    if (d.batch !== old.batch) diffs.push("Batch");
-                    if (d.rules !== old.rules) diffs.push("Rules");
-                    if (d.ips !== old.ips) diffs.push("IPs");
-                    if (diffs.length > 0) {
-                        changesArray.push(`\n--> Deploy${idx+1} : ${diffs.join(', ')}`);
-                    }
-                } else {
-                    changesArray.push(`\n--> Deploy${idx+1} : New`);
-                }
+        async function processSave() {
+            const cards = Array.from(document.querySelectorAll('.deploy-card'));
+            const newData = cards.map(c => ({ 
+                from: c.querySelector('.from-val').value.trim(), id: c.querySelector('.id-val').value.trim(), 
+                batch: c.querySelector('.batch-val').value, rules: c.querySelector('.rules-val').value, 
+                ips: c.querySelector('.ips-val').value.trim() 
+            }));
+
+            let changesLog = [];
+            newData.forEach((d, i) => {
+                const o = oldCloudData.deploys?.[i] || {};
+                let diffs = [];
+                if (d.from !== o.from) diffs.push("From"); if (d.id !== o.id) diffs.push("ID");
+                if (d.batch !== o.batch) diffs.push("Batch"); if (d.rules !== o.rules) diffs.push("Rules");
+                if (d.ips !== o.ips) diffs.push("IPs");
+                if (diffs.length > 0) changesLog.push(`\n📍 Deploy ${i+1} (${d.id || 'N/A'}): ${diffs.join(', ')}`);
             });
 
-            const finalLog = changesArray.join('');
-            if (!finalLog && currentFilter === oldCloudData.filter) {
-                alert("No changes detected.");
-                return;
-            }
-
-            if (newData.some(d => !d.from || !d.id || !d.ips)) { alert("Fill all fields!"); return; }
+            const timestamp = new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', '');
+            const saveObj = { ...oldCloudData, deploys: newData, filter: document.getElementById('filterKeyword').value, timestamp, summary: changesLog.join('') || "\n--> Plan Refreshed" };
 
             document.getElementById('loadingOverlay').style.display = 'flex';
-            const timestamp = new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', '');
+            await db.ref(`ems4/plans/${currentPlatform}/current`).set(saveObj);
+            await db.ref(`ems4/plans/${currentPlatform}/history`).push(saveObj);
 
-            try {
-                // Storing the actual change list in the 'summary' field
-                const saveObj = { 
-                    deploys: newData, 
-                    filter: currentFilter, 
-                    timestamp, 
-                    summary: finalLog || "\n--> Refresh UI" 
-                };
-                
-                await db.ref('ems4/plans/' + currentPlatform + '/current').set(saveObj);
-                await db.ref('ems4/plans/' + currentPlatform + '/history').push(saveObj);
-
-                const botMsg = `🚀 *UPDATE [#${currentPlatform}]*\n━━━━━━━━━━━━━━━\n🎯 Filter: ${currentFilter}\n🕒 Time: ${timestamp}\n📝 Update: ${saveObj.summary}\n━━━━━━━━━━━━━━━\n🔗 ${currentUrl}?plat=${currentPlatform}`;
-
-                await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: telegramChatId, text: botMsg, parse_mode: 'Markdown' })
+            if (changesLog.length > 0) {
+                const msg = `🚀 *UPDATE [#${currentPlatform}]*\n━━━━━━━━━━━━━━━\n🎯 Filter: ${saveObj.filter}\n🕒 Time: ${timestamp}\n📝 Changes: ${saveObj.summary}\n━━━━━━━━━━━━━━━\n🔗 ${githubBase}/?mode=view&plat=${currentPlatform}`;
+                await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, { 
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ chat_id: telegramChatId, text: msg, parse_mode: 'Markdown' }) 
                 });
+            }
+            location.reload();
+        }
 
-                alert("✅ Success!");
-                oldCloudData = saveObj;
-                document.getElementById('saveBtn').disabled = true;
-            } catch (e) { alert("Error: " + e.message); }
+        function loadHistory() {
+            db.ref(`ems4/plans/${currentPlatform}/history`).limitToLast(10).on('value', snap => {
+                const list = document.getElementById('historyList'); list.innerHTML = "";
+                const data = snap.val(); if (!data) return;
+                Object.keys(data).reverse().forEach(k => {
+                    const item = data[k];
+                    list.innerHTML += `
+                    <div class="history-item p-4 flex justify-between items-start">
+                        <div class="overflow-hidden">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-[10px] font-black bg-slate-100 px-2 py-0.5 rounded uppercase italic">${item.filter || 'NO-FILTER'}</span>
+                                <span class="text-[9px] text-slate-400 font-bold">${item.timestamp}</span>
+                            </div>
+                            <div class="text-[10px] text-red-600 font-bold uppercase leading-relaxed">${item.summary ? item.summary.replace(/\n/g, '<br>') : 'Updated'}</div>
+                        </div>
+                        <button onclick="loadHistoryToUI('${k}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-2 rounded-lg text-[9px] font-black transition">LOAD</button>
+                    </div>`;
+                });
+            });
+        }
+
+        async function loadHistoryToUI(key) {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            const snap = await db.ref(`ems4/plans/${currentPlatform}/history/${key}`).once('value');
+            const data = snap.val();
+            if (data) {
+                document.getElementById('deployCount').value = data.deploys.length;
+                document.getElementById('filterKeyword').value = data.filter || "";
+                generateDeploys(data.deploys);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
             document.getElementById('loadingOverlay').style.display = 'none';
         }
+
+        async function saveStatsOnly() {
+            if(userRole !== 'super') return;
+            const stats = { seeds: document.getElementById('statTotalSeeds').value, rdps: document.getElementById('statRDPs').value, sessions: document.getElementById('statSessions').value, rotMin: document.getElementById('rotMin').value, rotMax: document.getElementById('rotMax').value, qualityVal: document.getElementById('statQualityVal').value, pausedVal: document.getElementById('statPausedVal').value, dateStart: document.getElementById('statDateStart').value, dateEnd: document.getElementById('statDateEnd').value, rotationRaw: document.getElementById('rotationRawData').value };
+            await db.ref(`ems4/plans/${currentPlatform}/current/stats`).set(stats);
+            location.reload();
+        }
+
+        function checkAccess() { const k = document.getElementById('accessKey').value; if(k === ADMIN_KEY || k === SUPER_KEY) { localStorage.setItem('ems4_key', k); location.reload(); } }
+        function logout() { localStorage.removeItem('ems4_key'); location.reload(); }
+        function toggleRotation() { document.getElementById('rotationBox').classList.toggle('hidden'); }
+        function renderRotationLabels(t) { const c = document.getElementById('rotationLabelsGrid'); c.innerHTML = ""; if(!t) return; t.split('\n').forEach(l => { if(l.trim()) c.innerHTML += `<div class="rot-label truncate">${l.trim()}</div>`; }); }
+        function checkStatsChange() { if(userRole === 'super') document.getElementById('updateStatsBtn').disabled = false; }
     </script>
 </body>
 </html>
-
