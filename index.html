@@ -468,7 +468,23 @@
             const editorName = document.getElementById('editorSelect').value;
             const cards = document.querySelectorAll('.deploy-card');
             const deploys = Array.from(cards).map(c => ({ from: c.querySelector('.inp-from').value.trim(), id: c.querySelector('.inp-id').value.trim(), batch: c.querySelector('.inp-batch').value, rules: c.querySelector('.inp-rules').value, ips: c.querySelector('.inp-ips').value.trim() }));
-            const stats = { seeds: document.getElementById('statSeeds').value, rdps: document.getElementById('statRDPs').value, sessions: document.getElementById('statSessions').value,nbrseploysperday: document.getElementById('statSessions').value,nbrseedsperhour: document.getElementById('statSessions').value,nbrseedsperday: document.getElementById('statSessions').value,nbrlancement: document.getElementById('statSessions').value, rotMin: document.getElementById('rotMin').value, rotMax: document.getElementById('rotMax').value, quality: document.getElementById('statQuality').value, paused: document.getElementById('statPaused').value, start: document.getElementById('statStart').value, end: document.getElementById('statEnd').value, rotDetails: document.getElementById('rotDetailText').value };
+			
+            const stats = { 
+			seeds: document.getElementById('statSeeds').value, 
+			rdps: document.getElementById('statRDPs').value, 
+			sessions: document.getElementById('statSessions').value,
+			nbrseploysperday: document.getElementById('nbrseploysperday').value, // S7I7
+			nbrseedsperhour: document.getElementById('nbrseedsperhour').value,   // S7I7
+			nbrseedsperday: document.getElementById('nbrseedsperday').value,     // S7I7
+			nbrlancement: document.getElementById('nbrlancement').value,         // S7I7
+			rotMin: document.getElementById('rotMin').value, 
+			rotMax: document.getElementById('rotMax').value, 
+			quality: document.getElementById('statQuality').value, 
+			paused: document.getElementById('statPaused').value, 
+			start: document.getElementById('statStart').value, 
+			end: document.getElementById('statEnd').value, 
+			rotDetails: document.getElementById('rotDetailText').value 
+			};
             await db.ref(`ems4/plans/${currentPlatform}/current`).set({ deploys, filter: document.getElementById('filterInput').value.trim(), stats, editor: editorName, updatedAt: new Date().toLocaleString() });
             location.reload();
         }
