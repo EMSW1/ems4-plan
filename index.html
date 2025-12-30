@@ -165,6 +165,22 @@
                 <label class="block text-[12px] font-black uppercase text-center mb-1">Sessions</label>
                 <input type="text" id="statSessions" oninput="checkChanges()" class="stat-field w-full bg-transparent font-black text-blue-500 outline-none text-center text-sm uppercase">
             </div>
+			<div class="p-3 bg-blue-500/5 rounded-2xl border border-blue-500/10">
+                <label class="block text-[12px] font-black uppercase text-center mb-1">NBR-DEPLOYS/day</label>
+                <input type="text" id="nbrseploysperday" oninput="checkChanges()" class="stat-field w-full bg-transparent font-black text-blue-500 outline-none text-center text-sm uppercase">
+            </div>
+			<div class="p-3 bg-blue-500/5 rounded-2xl border border-blue-500/10">
+                <label class="block text-[12px] font-black uppercase text-center mb-1">NBR-SEEDS/h</label>
+                <input type="text" id="nbrseedsperhour" oninput="checkChanges()" class="stat-field w-full bg-transparent font-black text-blue-500 outline-none text-center text-sm uppercase">
+            </div>
+			<div class="p-3 bg-blue-500/5 rounded-2xl border border-blue-500/10">
+                <label class="block text-[12px] font-black uppercase text-center mb-1">NBR-SEEDS/day</label>
+                <input type="text" id="nbrseedsperday" oninput="checkChanges()" class="stat-field w-full bg-transparent font-black text-blue-500 outline-none text-center text-sm uppercase">
+            </div>
+			<div class="p-3 bg-blue-500/5 rounded-2xl border border-blue-500/10">
+                <label class="block text-[12px] font-black uppercase text-center mb-1">NBR-LANCEMENT</label>
+                <input type="text" id="nbrlancement" oninput="checkChanges()" class="stat-field w-full bg-transparent font-black text-blue-500 outline-none text-center text-sm uppercase">
+            </div>
             <div class="p-3 bg-blue-500/5 rounded-2xl border border-blue-500/10 text-center">
                 <label class="block text-[12px] font-black uppercase mb-1">Rotation</label>
                 <div class="flex justify-center items-center gap-0.5 font-black text-blue-500 text-xs mb-1">
@@ -308,6 +324,10 @@
             document.getElementById('statSeeds').value = s.seeds || '';
             document.getElementById('statRDPs').value = s.rdps || '';
             document.getElementById('statSessions').value = s.sessions || '';
+			document.getElementById('nbrseploysperday').value = s.nbrseploysperday || '';
+			document.getElementById('nbrseedsperhour').value = s.nbrseedsperhour || '';
+			document.getElementById('nbrseedsperday').value = s.nbrseedsperday || '';
+			document.getElementById('nbrlancement').value = s.nbrlancement || '';
             document.getElementById('rotMin').value = s.rotMin || '';
             document.getElementById('rotMax').value = s.rotMax || '';
             document.getElementById('statQuality').value = s.quality || '';
@@ -415,7 +435,7 @@
             const cards = document.querySelectorAll('.deploy-card');
             const deploys = Array.from(cards).map(c => ({ from: c.querySelector('.inp-from').value.trim(), id: c.querySelector('.inp-id').value.trim(), batch: c.querySelector('.inp-batch').value, rules: c.querySelector('.inp-rules').value, ips: c.querySelector('.inp-ips').value.trim() }));
             const filter = document.getElementById('filterInput').value.trim();
-            const stats = { seeds: document.getElementById('statSeeds').value, rdps: document.getElementById('statRDPs').value, sessions: document.getElementById('statSessions').value, rotMin: document.getElementById('rotMin').value, rotMax: document.getElementById('rotMax').value, quality: document.getElementById('statQuality').value, paused: document.getElementById('statPaused').value, start: document.getElementById('statStart').value, end: document.getElementById('statEnd').value, rotDetails: document.getElementById('rotDetailText').value };
+            const stats = { seeds: document.getElementById('statSeeds').value, rdps: document.getElementById('statRDPs').value, sessions: document.getElementById('statSessions').value,nbrseploysperday: document.getElementById('statSessions').value,nbrseedsperhour: document.getElementById('statSessions').value,nbrseedsperday: document.getElementById('statSessions').value,nbrlancement: document.getElementById('statSessions').value, rotMin: document.getElementById('rotMin').value, rotMax: document.getElementById('rotMax').value, quality: document.getElementById('statQuality').value, paused: document.getElementById('statPaused').value, start: document.getElementById('statStart').value, end: document.getElementById('statEnd').value, rotDetails: document.getElementById('rotDetailText').value };
 
             let logChanges = [];
             if(filter !== (stateData.filter || "")) logChanges.push(`🔍 Keyword: ${filter || 'NONE'}`);
@@ -448,7 +468,7 @@
             const editorName = document.getElementById('editorSelect').value;
             const cards = document.querySelectorAll('.deploy-card');
             const deploys = Array.from(cards).map(c => ({ from: c.querySelector('.inp-from').value.trim(), id: c.querySelector('.inp-id').value.trim(), batch: c.querySelector('.inp-batch').value, rules: c.querySelector('.inp-rules').value, ips: c.querySelector('.inp-ips').value.trim() }));
-            const stats = { seeds: document.getElementById('statSeeds').value, rdps: document.getElementById('statRDPs').value, sessions: document.getElementById('statSessions').value, rotMin: document.getElementById('rotMin').value, rotMax: document.getElementById('rotMax').value, quality: document.getElementById('statQuality').value, paused: document.getElementById('statPaused').value, start: document.getElementById('statStart').value, end: document.getElementById('statEnd').value, rotDetails: document.getElementById('rotDetailText').value };
+            const stats = { seeds: document.getElementById('statSeeds').value, rdps: document.getElementById('statRDPs').value, sessions: document.getElementById('statSessions').value,nbrseploysperday: document.getElementById('statSessions').value,nbrseedsperhour: document.getElementById('statSessions').value,nbrseedsperday: document.getElementById('statSessions').value,nbrlancement: document.getElementById('statSessions').value, rotMin: document.getElementById('rotMin').value, rotMax: document.getElementById('rotMax').value, quality: document.getElementById('statQuality').value, paused: document.getElementById('statPaused').value, start: document.getElementById('statStart').value, end: document.getElementById('statEnd').value, rotDetails: document.getElementById('rotDetailText').value };
             await db.ref(`ems4/plans/${currentPlatform}/current`).set({ deploys, filter: document.getElementById('filterInput').value.trim(), stats, editor: editorName, updatedAt: new Date().toLocaleString() });
             location.reload();
         }
