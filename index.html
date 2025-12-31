@@ -10,31 +10,47 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-body: #f0f4f8;
-            --card-bg: rgba(255, 255, 255, 0.8);
-            --text-main: #1e293b;
-            --border-color: rgba(255, 255, 255, 0.4);
-            --input-bg: #f8fafc;
-            --label-color: #64748b;
-        }
+        /* Lwan dyal Mode Normal (Light) */
+        --bg-body: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+        --card-bg: rgba(255, 255, 255, 0.85); /* Khllina l-carte kat-fout chwiya l-lon dyal l-background */
+        --text-main: #1e293b;
+        --border-color: rgba(255, 255, 255, 0.4);
+        --input-bg: #f8fafc;
+        --label-color: #64748b;
+    }
 
         .dark {
-            --bg-body: #0f172a;
-            --card-bg: rgba(30, 41, 59, 0.9);
-            --text-main: #f1f5f9;
-            --border-color: rgba(255, 255, 255, 0.1);
-            --input-bg: #1e293b;
-            --label-color: #94a3b8;
-        }
+        /* Mix dyal lwan fati7a o pro: Royal Blue, Deep Purple, o Electric Cyan */
+        --bg-body: linear-gradient(-45deg, #060b19, #1e3a8a, #581c87, #0891b2, #060b19);
+        --card-bg: rgba(15, 23, 42, 0.75); /* Card ghameq chwiya bach lwan li lor ibano f l-jnib */
+        --text-main: #f8fafc;
+        --border-color: rgba(255, 255, 255, 0.1);
+        --input-bg: rgba(30, 41, 59, 0.5);
+        --label-color: #cbd5e1;
+    }
 
-        body { font-family: 'Inter', sans-serif; background: var(--bg-body); color: var(--text-main); transition: all 0.3s ease; }
+         body { 
+        font-family: 'Inter', sans-serif; 
+        background: var(--bg-body); 
+        background-size: 300% 300%; /* Sghrt l-size bach lwan idkhlo f b3dyathom ktr */
+        animation: gradientBG 10s ease infinite; /* 10s tkhli l-animation tban 7iya */
+        color: var(--text-main); 
+        transition: all 0.3s ease; 
+        min-height: 100vh;
+    }
+	
+	@keyframes gradientBG {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
         
         .glass-card { 
-            background: var(--card-bg); 
-            backdrop-filter: blur(10px); 
-            border: 1px solid var(--border-color);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
-        }
+        background: var(--card-bg); 
+        backdrop-filter: blur(10px); 
+        border: 1px solid var(--border-color);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+    }
 
         label { color: var(--label-color) !important; }
         select, input, textarea { color: var(--text-main) !important; background-color: var(--input-bg) !important; }
