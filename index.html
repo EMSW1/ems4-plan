@@ -19,7 +19,7 @@
         --label-color: #64748b;
     }
 
-        .dark {
+       .dark {
         /* Mix dyal lwan fati7a o pro: Royal Blue, Deep Purple, o Electric Cyan */
         --bg-body: linear-gradient(-45deg, #060b19, #1e3a8a, #581c87, #0891b2, #060b19);
         --card-bg: rgba(15, 23, 42, 0.75); /* Card ghameq chwiya bach lwan li lor ibano f l-jnib */
@@ -29,7 +29,7 @@
         --label-color: #cbd5e1;
     }
 
-         body { 
+       body { 
         font-family: 'Inter', sans-serif; 
         background: var(--bg-body); 
         background-size: 300% 300%; /* Sghrt l-size bach lwan idkhlo f b3dyathom ktr */
@@ -38,14 +38,14 @@
         transition: all 0.3s ease; 
         min-height: 100vh;
     }
-	
+        
 	@keyframes gradientBG {
         0% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
     }
-        
-        .glass-card { 
+		
+         .glass-card { 
         background: var(--card-bg); 
         backdrop-filter: blur(10px); 
         border: 1px solid var(--border-color);
@@ -217,6 +217,10 @@
                 <label class="block text-[12px] font-black uppercase mb-1">Period</label>
                 <div class="flex gap-1"><input type="text" id="statStart" oninput="checkChanges()" class="stat-field w-full bg-transparent font-black text-orange-500 text-[10px] text-center outline-none uppercase" placeholder="S"><input type="text" id="statEnd" oninput="checkChanges()" class="stat-field w-full bg-transparent font-black text-orange-500 text-[10px] text-center outline-none uppercase" placeholder="E"></div>
             </div>
+			<div class="p-3 bg-blue-500/5 rounded-2xl border border-blue-500/10">
+                <label class="block text-[12px] font-black uppercase text-center mb-1">Proxy</label>
+                <input type="text" id="statProxy" oninput="checkChanges()" class="stat-field w-full bg-transparent font-black text-blue-500 outline-none text-center text-sm uppercase">
+            </div>
         </div>
 
         <div class="glass-card p-6 rounded-[2rem] grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
@@ -340,6 +344,7 @@
             document.getElementById('statSeeds').value = s.seeds || '';
             document.getElementById('statRDPs').value = s.rdps || '';
             document.getElementById('statSessions').value = s.sessions || '';
+			document.getElementById('statProxy').value = s.proxy || 0;
 			document.getElementById('nbrseploysperday').value = s.nbrseploysperday || '';
 			document.getElementById('nbrseedsperhour').value = s.nbrseedsperhour || '';
 			document.getElementById('nbrseedsperday').value = s.nbrseedsperday || '';
@@ -451,7 +456,7 @@
             const cards = document.querySelectorAll('.deploy-card');
             const deploys = Array.from(cards).map(c => ({ from: c.querySelector('.inp-from').value.trim(), id: c.querySelector('.inp-id').value.trim(), batch: c.querySelector('.inp-batch').value, rules: c.querySelector('.inp-rules').value, ips: c.querySelector('.inp-ips').value.trim() }));
             const filter = document.getElementById('filterInput').value.trim();
-            const stats = { seeds: document.getElementById('statSeeds').value, rdps: document.getElementById('statRDPs').value, sessions: document.getElementById('statSessions').value,nbrseploysperday: document.getElementById('nbrseploysperday').value,nbrseedsperhour: document.getElementById('nbrseedsperhour').value,nbrseedsperday: document.getElementById('nbrseedsperday').value,nbrlancement: document.getElementById('nbrlancement').value, rotMin: document.getElementById('rotMin').value, rotMax: document.getElementById('rotMax').value, quality: document.getElementById('statQuality').value, paused: document.getElementById('statPaused').value, start: document.getElementById('statStart').value, end: document.getElementById('statEnd').value, rotDetails: document.getElementById('rotDetailText').value };
+            const stats = { seeds: document.getElementById('statSeeds').value, rdps: document.getElementById('statRDPs').value, sessions: document.getElementById('statSessions').value, proxy: document.getElementById('statProxy').value, nbrseploysperday: document.getElementById('nbrseploysperday').value,nbrseedsperhour: document.getElementById('nbrseedsperhour').value,nbrseedsperday: document.getElementById('nbrseedsperday').value,nbrlancement: document.getElementById('nbrlancement').value, rotMin: document.getElementById('rotMin').value, rotMax: document.getElementById('rotMax').value, quality: document.getElementById('statQuality').value, paused: document.getElementById('statPaused').value, start: document.getElementById('statStart').value, end: document.getElementById('statEnd').value, rotDetails: document.getElementById('rotDetailText').value };
 
             let logChanges = [];
             if(filter !== (stateData.filter || "")) logChanges.push(`🔍 Keyword: ${filter || 'NONE'}`);
@@ -489,6 +494,7 @@
 			seeds: document.getElementById('statSeeds').value, 
 			rdps: document.getElementById('statRDPs').value, 
 			sessions: document.getElementById('statSessions').value,
+			proxy: document.getElementById('statProxy').value,
 			nbrseploysperday: document.getElementById('nbrseploysperday').value, // S7I7
 			nbrseedsperhour: document.getElementById('nbrseedsperhour').value,   // S7I7
 			nbrseedsperday: document.getElementById('nbrseedsperday').value,     // S7I7
