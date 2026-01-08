@@ -1181,51 +1181,28 @@
                 });
 
                 // Send Telegram (Only if changes detected or force)
-                if (hasRealChanges || forceTelegram) { 
-    const publicUrl = "https://emsw.pages.dev/"; // 7titha hna bach tkon ma3roufa
-    const viewLink = `${publicUrl}?mode=view&plat=${currentPlatform}&target=true`;
-    let telegramMsg = "";
+                if (hasRealChanges) {
+                    const viewLink = `${publicUrl}?mode=view&plat=${currentPlatform}&target=true`;
+                    let telegramMsg = "";
 
-    // Hna khdamna b 'deploys.length' hit hiya li katchrah l'état actuel
-    if (deploys.length === 0) {
-        // Stopped Case
-        telegramMsg = `⚠️ <b>STOPPED: #${currentPlatform}</b>\n` + 
-                      `👤 <b>BY : ${editorName}</b>\n` + 
-                      `━━━━━━━━━━━━━━━\n` + 
-                      `🚫 <b>ALL DEPLOYS REMOVED</b>\n` + 
-                      `━━━━━━━━━━━━━━━\n` + 
-                      `🔗 <a href="${viewLink}"><b>VIEW PLAN</b></a>`;
-    } else {
-        // Update Case
-        // Ila kan logChanges khawi, dir message par défaut
-        const changesText = (typeof logChanges !== 'undefined' && logChanges.length > 0) 
-                            ? logChanges.join('\n') 
-                            : "• Manual Save";
-                            
-        telegramMsg = `🔄 <b>UPDATE: #${currentPlatform}</b>\n` + 
-                      `👤 <b>BY: ${editorName}</b>\n` + 
-                      `━━━━━━━━━━━━━━━\n` + 
-                      `📝 <b>CHANGES:</b>\n` + 
-                      `${changesText}\n` + 
-                      `━━━━━━━━━━━━━━━\n` + 
-                      `🔗 <a href="${viewLink}"><b>VIEW PLAN</b></a>`;
-    }
-    
-    try { 
-        await fetch(`https://api.telegram.org/bot${CONFIG.telegram.token}/sendMessage`, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ chat_id: CONFIG.telegram.chatId, text: telegramMsg, parse_mode: 'HTML' }) 
-        }); 
-    } catch (e) { console.error("Telegram Error:", e); }
-}
-
-// Update Snapshot
-if (typeof originalPlatformsData !== 'undefined') {
-    originalPlatformsData[currentPlatform] = JSON.parse(JSON.stringify({ deploys, filter, stats, editor: editorName }));
-}
-
-setTimeout(() => { location.reload(); }, 500);
+                    if (deploys.length === 0 && oldDeploys.length > 0) {
+                        // Stopped Case
+                        telegramMsg = `⚠️ <b>STOPPED: #${currentPlatform}</b>\n` + `👤 <b>BY : ${editorName}</b>\n` + `━━━━━━━━━━━━━━━\n` + `🚫 <b>ALL DEPLOYS REMOVED</b>\n` + `━━━━━━━━━━━━━━━\n` + `🔗 <a href="${viewLink}"><b>VIEW PLAN</b></a>`;
+                    } else {
+                        // Update Case
+                        const changesText = logChanges.length > 0 ? logChanges.join('\n') : "• Saved by user";
+                        telegramMsg = `🔄 <b>${currentPlatform} UPDATE</b>\n` + `👤 <b>BY: ${editorName}</b>\n` + `📝 <b>CHANGES:</b>\n` + `${changesText}\n` + `━━━━━━━━━━━━━━━\n` + `🔗 <b>${currentPlatform} :  <a href="${viewLink}">VIEW PLAN</b></a>`;
+                    }
+                    try { 
+                        await fetch(`https://api.telegram.org/bot${CONFIG.telegram.token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: CONFIG.telegram.chatId, text: telegramMsg, parse_mode: 'HTML' }) }); 
+                    } catch (e) { console.error("Telegram Error:", e); }
+                }
+                
+                // Update Original Snapshot immediately so next save doesn't re-report old changes
+                originalPlatformsData[currentPlatform] = JSON.parse(JSON.stringify({ deploys, filter, stats, editor: editorName }));
+            }
+            
+            setTimeout(() => { location.reload(); }, 500);
         }
         
         async function superQuickSave() {
