@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -397,7 +398,7 @@
 
         <!-- Sticky Action Bar -->
         <div id="actionToolbar" class="admin-only hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-4xl px-4 flex gap-3 z-50">
-            <button id="saveBtn" disabled onclick="saveAll()" class="w-full text-white py-4 rounded-[2rem] font-black text-xl shadow-2xl uppercase italic border-b-4 border-blue-900 flex items-center justify-center gap-3 active:scale-95 backdrop-blur-md">Save Changes</button>
+            <button id="saveBtn" disabled onclick="saveAll(true)" class="w-full text-white py-4 rounded-[2rem] font-black text-xl shadow-2xl uppercase italic border-b-4 border-blue-900 flex items-center justify-center gap-3 active:scale-95 backdrop-blur-md">Save Changes</button>
             <button id="superSaveBtn" onclick="superQuickSave()" class="super-only hidden bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-[2rem] font-black text-xs shadow-2xl border-b-4 border-purple-900 uppercase italic active:scale-95 backdrop-blur-md">⚡ Global</button>
         </div>
     </div>
@@ -1078,7 +1079,7 @@
             document.getElementById('actionToolbar').classList.remove('hidden');
         }
 
-        async function saveAll() {
+        async function saveAll(sendNotif = true) {
             document.getElementById('loadingOverlay').style.display = 'flex';
             
             // Save Global Stats first
@@ -1094,7 +1095,6 @@
             }
             
             const editorName = document.getElementById('globalEditor').value;
-            const publicUrl = "https://ems4-plan.pages.dev/";
             
             // Identify visible platforms (Super admin sees all, others see visible only)
             const platsToSave = PLATFORMS.filter(p => userRole === 'super' || platVisibility[p]);
@@ -1113,33 +1113,24 @@
                 const stats = platformData.stats || {};
                 
                 // --- DIFF LOGIC ---
-                // We compare current memory state (platformsData) vs initial snapshot (originalPlatformsData)
-                // This handles both manual and bulk changes because applyBulk updates platformsData
                 const originalData = originalPlatformsData[plat] || { deploys: [], stats: {}, filter: "" };
                 const oldDeploys = originalData.deploys || [];
                 
                 let logChanges = [];
                 let hasRealChanges = false;
                 
-                // Check Global Filter Change
+                // Track internal changes
                 if((originalData.filter || "") !== filter) {
                     logChanges.push("• Global Filter updated");
-                    hasRealChanges = true;
                 }
-
-                // Check Stats Change
                 if(JSON.stringify(stats) !== JSON.stringify(originalData.stats || {})) {
                     logChanges.push("• Performance Stats updated");
-                    hasRealChanges = true;
                 }
 
                 if (deploys.length === 0) {
-                     // If all deploys removed, treat as STOPPED
                      if(oldDeploys.length > 0) hasRealChanges = true;
                 } else {
-                     // Check each deploy
                      const maxLen = Math.max(deploys.length, oldDeploys.length);
-                     
                      for(let i=0; i<maxLen; i++) {
                          const dNew = deploys[i];
                          const dOld = oldDeploys[i];
@@ -1147,13 +1138,10 @@
 
                          if (!dOld && dNew) {
                              mods.push("Created");
-                         } else if (dOld && !dNew) {
-                             // Removed deploy, handled by length check usually, but good to note
                          } else if (dOld && dNew) {
                              if ((dNew.id||"").trim() !== (dOld.id||"").trim()) mods.push("ID");
                              if (dNew.batch !== dOld.batch) mods.push("BATCH");
                              if (dNew.rules !== dOld.rules) mods.push("RULES");
-                             
                              const ipsNew = (dNew.ips||"").trim();
                              const ipsOld = (dOld.ips||"").trim();
                              if (ipsNew !== ipsOld) mods.push("IPs");
@@ -1164,14 +1152,13 @@
                              hasRealChanges = true;
                          }
                      }
-                     
                      if(oldDeploys.length > deploys.length) {
                          logChanges.push(`• ${oldDeploys.length - deploys.length} Deploys Removed`);
                          hasRealChanges = true;
                      }
                 }
                 
-                // Save to Firebase (Always save to ensure DB matches UI)
+                // Save to Firebase
                 await db.ref(`ems4/plans/${currentPlatform}/current`).set({ 
                     deploys, 
                     filter, 
@@ -1180,16 +1167,17 @@
                     updatedAt: new Date().toLocaleString() 
                 });
 
-                // Send Telegram (Only if changes detected or force)
-                if (hasRealChanges) {
-                    const viewLink = `${publicUrl}?mode=view&plat=${currentPlatform}&target=true`;
+                // Send Telegram (ONLY if sendNotif is true AND actual Deploy changes detected)
+                if (sendNotif && hasRealChanges) {
+                    // Mapping Platform to unique link as per prompt: WEB -> emsw.pages.dev
+                    const platKey = currentPlatform.charAt(0).toLowerCase();
+                    const platformUrl = `https://ems${platKey}.pages.dev/`;
+                    const viewLink = `${platformUrl}?mode=view&plat=${currentPlatform}&target=true`;
+                    
                     let telegramMsg = "";
-
                     if (deploys.length === 0 && oldDeploys.length > 0) {
-                        // Stopped Case
                         telegramMsg = `⚠️ <b>STOPPED: #${currentPlatform}</b>\n` + `👤 <b>BY : ${editorName}</b>\n` + `━━━━━━━━━━━━━━━\n` + `🚫 <b>ALL DEPLOYS REMOVED</b>\n` + `━━━━━━━━━━━━━━━\n` + `🔗 <a href="${viewLink}"><b>VIEW PLAN</b></a>`;
                     } else {
-                        // Update Case
                         const changesText = logChanges.length > 0 ? logChanges.join('\n') : "• Saved by user";
                         telegramMsg = `🔄 <b>#${currentPlatform} UPDATE</b>\n` + `👤 <b>BY: ${editorName}</b>\n` + `📝 <b>CHANGES:</b>\n` + `${changesText}\n` + `━━━━━━━━━━━━━━━\n` + `🔗 <b><a href="${viewLink}">VIEW PLAN</a></b>`;
                     }
@@ -1199,7 +1187,6 @@
                     } catch (e) { console.error("Telegram Error:", e); }
                 }
                 
-                // Update Original Snapshot immediately so next save doesn't re-report old changes
                 originalPlatformsData[currentPlatform] = JSON.parse(JSON.stringify({ deploys, filter, stats, editor: editorName }));
             }
             
@@ -1207,7 +1194,8 @@
         }
         
         async function superQuickSave() {
-             saveAll(); 
+             // Explicitly passing false to ensure no Telegram notifications are sent
+             saveAll(false); 
         }
 
         async function sendTelegramMsg(text) {
@@ -1342,7 +1330,6 @@
             closeDetails();
         }
 
-        // NEW FUNCTION to handle (-) click
         function quickRemoveLastDeploy(plat) {
             if(platformsData[plat] && platformsData[plat].deploys.length > 0) {
                 removeDeploy(plat, platformsData[plat].deploys.length - 1);
