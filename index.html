@@ -793,7 +793,7 @@
         async function updateBoitesConfig(plat, val) {
             if(userRole !== 'super') return;
             boitesConfig[plat] = parseInt(val) || 0;
-            await db.ref('emsw/config/boites').set(boitesConfig);
+            await db.ref('ems4/config/boites').set(boitesConfig);
             renderPlatformDeploys(plat); // Re-calc division
             checkChanges();
         }
