@@ -1169,9 +1169,7 @@
 
                 // Send Telegram (ONLY if sendNotif is true AND actual Deploy changes detected)
                 if (sendNotif && hasRealChanges) {
-                    // Mapping Platform to unique link as per prompt: WEB -> ems4-plan.pages.dev
-                    const platKey = currentPlatform.charAt(0).toLowerCase();
-                    const platformUrl = `https://ems${platKey}.pages.dev/`;
+                    const platformUrl = `https://ems4-plan.pages.dev/`;
                     const viewLink = `${platformUrl}?mode=view&plat=${currentPlatform}&target=true`;
                     
                     let telegramMsg = "";
