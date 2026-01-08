@@ -1191,9 +1191,8 @@
                     } else {
                         // Update Case
                         const changesText = logChanges.length > 0 ? logChanges.join('\n') : "• Saved by user";
-                        telegramMsg = `🔄 <b>${currentPlatform} UPDATE</b>\n` + `👤 <b>BY: ${editorName}</b>\n` + `📝 <b>CHANGES:</b>\n` + `${changesText}\n` + `━━━━━━━━━━━━━━━\n` + `🔗 <b>${currentPlatform} :  <a href="${viewLink}">VIEW PLAN</b></a)`;
+                        telegramMsg = `🔄 <b>${currentPlatform} UPDATE</b>\n` + `👤 <b>BY: ${editorName}</b>\n` + `📝 <b>CHANGES:</b>\n` + `${changesText}\n` + `━━━━━━━━━━━━━━━\n` + `🔗 <b>${currentPlatform} :  <a href="${viewLink}">VIEW PLAN</b></a>`;
                     }
-                    
                     try { 
                         await fetch(`https://api.telegram.org/bot${CONFIG.telegram.token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: CONFIG.telegram.chatId, text: telegramMsg, parse_mode: 'HTML' }) }); 
                     } catch (e) { console.error("Telegram Error:", e); }
